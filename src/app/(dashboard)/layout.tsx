@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [expired, setExpired] = useState(false)
   const [isDemo, setIsDemo] = useState(false)
   const [countdown, setCountdown] = useState(5)
- 
+
   useEffect(() => {
     let lastCheckTime = Date.now()
 
@@ -52,7 +52,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         if (!isSilent) setLoading(false)
       }
     }
-    
+
     // Initial verification
     loadUser(false)
 
@@ -117,36 +117,36 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const navLinks = isSuperAdmin
     ? [
-        { href: '/dashboard', labelKey: 'nav.dashboard' },
-        { href: '/agent-management', labelKey: 'nav.agentManagement' },
-        { href: '/settings', labelKey: 'nav.settings' },
-      ]
+      { href: '/dashboard', labelKey: 'nav.dashboard' },
+      { href: '/agent-management', labelKey: 'nav.agentManagement' },
+      { href: '/settings', labelKey: 'nav.settings' },
+    ]
     : [
-        { href: '/dashboard', labelKey: 'nav.dashboard' },
-        { href: '/members', labelKey: 'nav.customers' },
-        { href: '/purchase', labelKey: 'nav.milkPurchase' },
-        { href: '/dashboard/milk-rates', labelKey: 'nav.milkRates' },
-        { href: '/sale', labelKey: 'nav.milkSales' },
-        { href: '/payments', labelKey: 'nav.payments' },
-        { href: '/passbook', labelKey: 'nav.passbook' },
-        { href: '/reports', labelKey: 'nav.reports' },
-        { href: '/inventory', labelKey: 'nav.inventory' },
-        { href: '/settings', labelKey: 'nav.settings' },
-      ]
+      { href: '/dashboard', labelKey: 'nav.dashboard' },
+      { href: '/members', labelKey: 'nav.customers' },
+      { href: '/purchase', labelKey: 'nav.milkPurchase' },
+      { href: '/dashboard/milk-rates', labelKey: 'nav.milkRates' },
+      { href: '/sale', labelKey: 'nav.milkSales' },
+      { href: '/payments', labelKey: 'nav.payments' },
+      { href: '/passbook', labelKey: 'nav.passbook' },
+      { href: '/reports', labelKey: 'nav.reports' },
+      { href: '/inventory', labelKey: 'nav.inventory' },
+      { href: '/settings', labelKey: 'nav.settings' },
+    ]
 
   const isActive = (href: string) => pathname === href
 
   if (expired) {
-    const title = isDemo 
-      ? (locale === 'hi' ? 'डेमो समाप्त (Demo Expired)' : 'Demo Expired') 
+    const title = isDemo
+      ? (locale === 'hi' ? 'डेमो समाप्त (Demo Expired)' : 'Demo Expired')
       : (locale === 'hi' ? 'सदस्यता समाप्त (Subscription Expired)' : 'Subscription Expired')
     const description = isDemo
-      ? (locale === 'hi' 
-          ? 'आपका ट्रायल (डेमो) समाप्त हो गया है। कृपया आगे उपयोग के लिए शर्मा डेयरी इक्विपमेंट्स से संपर्क करें।' 
-          : 'Your trial (demo) has expired. Please contact Sharma Dairy Equipments to activate subscription.')
-      : (locale === 'hi' 
-          ? 'आपकी सदस्यता अवधि समाप्त हो गई है। कृपया शर्मा डेयरी इक्विपमेंट्स से संपर्क करें।' 
-          : 'Your subscription has expired. Please contact Sharma Dairy Equipments to renew access.')
+      ? (locale === 'hi'
+        ? 'आपका ट्रायल (डेमो) समाप्त हो गया है। कृपया आगे उपयोग के लिए शर्मा डेयरी इक्विपमेंट्स से संपर्क करें।'
+        : 'Your trial (demo) has expired. Please contact Sharma Dairy Equipments to activate subscription.')
+      : (locale === 'hi'
+        ? 'आपकी सदस्यता अवधि समाप्त हो गई है। कृपया शर्मा डेयरी इक्विपमेंट्स से संपर्क करें।'
+        : 'Your subscription has expired. Please contact Sharma Dairy Equipments to renew access.')
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/85 backdrop-blur-md p-4">
@@ -180,7 +180,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (deactivated) {
     const isForcedLogout = deactivatedReason === 'FORCE_LOGOUT'
     const title = isForcedLogout ? 'Session Terminated' : 'Account Deactivated'
-    const description = isForcedLogout 
+    const description = isForcedLogout
       ? 'Logged out by administrator. Please contact Sharma Dairy.'
       : 'Your account has been deactivated by the administrator. Please contact support.'
 
@@ -230,13 +230,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Image src="/logo.png" alt="Sharma Dairy" width={44} height={44} className="rounded-xl border border-blue-100" />
             <div>
               <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
-                {isSuperAdmin 
-                  ? (locale === 'hi' ? 'सास सुपर एडमिन' : 'SaaS Super Admin') 
+                {isSuperAdmin
+                  ? (locale === 'hi' ? 'सास सुपर एडमिन' : 'SaaS Super Admin')
                   : (locale === 'hi' ? 'डेयरी ऑपरेटर सास' : 'Dairy Operator SaaS')}
               </p>
               <p className="text-lg font-extrabold text-[#0084FF]">
-                {isSuperAdmin 
-                  ? (locale === 'hi' ? 'सास एडमिन कंसोल' : 'SaaS Admin Console') 
+                {isSuperAdmin
+                  ? (locale === 'hi' ? 'सास एडमिन कंसोल' : 'SaaS Admin Console')
                   : (locale === 'hi' ? 'शर्मा डेयरी' : 'Sharma Dairy')}
               </p>
             </div>
@@ -249,11 +249,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`block rounded-xl px-4 py-2.5 transition ${
-                  active 
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600 pl-3' 
+                className={`block rounded-xl px-4 py-2.5 transition ${active
+                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600 pl-3'
                     : 'hover:bg-blue-50/50 hover:text-slate-800'
-                }`}
+                  }`}
               >
                 {t(link.labelKey)}
               </Link>
@@ -269,18 +268,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-3">
               <Image src="/logo.png" alt="Sharma Dairy" width={32} height={32} className="rounded-lg border border-blue-100 lg:hidden" />
               <div className="font-bold text-slate-700 text-xs sm:text-sm md:text-base whitespace-nowrap">
-                {isSuperAdmin 
-                  ? (locale === 'hi' ? 'शर्मा डेयरी उपकरण' : 'Sharma dairy equipments') 
+                {isSuperAdmin
+                  ? (locale === 'hi' ? 'शर्मा डेयरी इक्विपमेंट्स' : 'Sharma Dairy Equipments')
                   : t('header.operationsDashboard')}
               </div>
             </div>
-            
+
             {/* Desktop Header Actions */}
             <div className="flex items-center space-x-1.5 sm:space-x-4">
               {user && (
                 <span className="text-[10px] sm:text-xs font-bold bg-blue-50 text-blue-700 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-blue-100 whitespace-nowrap shrink-0">
-                  {user.name ? user.name.split(' ')[0] : ''} ({isSuperAdmin 
-                    ? (locale === 'hi' ? 'सुपर एडमिन' : 'Super Admin') 
+                  {user.name ? user.name.split(' ')[0] : ''} ({isSuperAdmin
+                    ? (locale === 'hi' ? 'सुपर एडमिन' : 'Super Admin')
                     : (locale === 'hi' ? 'एजेंट' : 'Agent')})
                 </span>
               )}
@@ -295,18 +294,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {navLinks.map((link) => {
                 const active = isActive(link.href)
                 return (
-                  <Link 
+                  <Link
                     key={link.href}
-                    href={link.href} 
-                    className={`rounded-lg px-3 py-1.5 font-semibold transition ${
-                      active ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                    }`}
+                    href={link.href}
+                    className={`rounded-lg px-3 py-1.5 font-semibold transition ${active ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                      }`}
                   >
                     {t(link.labelKey)}
                   </Link>
                 )
               })}
-              
+
             </nav>
           </div>
         </header>
