@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { deleteProduct, deleteMultipleProducts, updateProduct } from '@/app/actions/inventory'
+import { deleteProductLocal, deleteMultipleProductsLocal, updateProductLocal } from '@/lib/products-local'
 import { getSessionUserRole } from '@/app/actions/auth'
 import { Pagination } from '@/components/ui/pagination'
 import { useLanguage } from '@/context/LanguageContext'
 
-export function ProductsList({ products: initialProducts }: { products: any[] }) {
+export function ProductsList({ products: initialProducts, onProductsChanged }: { products: any[]; onProductsChanged?: () => void }) {
   const router = useRouter()
   const { locale } = useLanguage()
   const [role, setRole] = useState<string | null>(null)
@@ -64,12 +64,12 @@ export function ProductsList({ products: initialProducts }: { products: any[] })
       return
     }
     if (confirm(`Are you sure you want to delete product "${name}"?`)) {
-      const res = await deleteProduct(id)
+      const res = await deleteProductLocal(id)
       if (res?.error) {
         alert('Error: ' + res.error)
       } else {
         alert('Product deleted successfully.')
-        router.refresh()
+        if (onProductsChanged) onProductsChanged()
       }
     }
   }
@@ -78,14 +78,14 @@ export function ProductsList({ products: initialProducts }: { products: any[] })
     if (!isAdmin) return
 
     if (confirm(`Are you sure you want to delete the ${selectedIds.length} selected products?`)) {
-      const res = await deleteMultipleProducts(selectedIds)
+      const res = await deleteMultipleProductsLocal(selectedIds)
       if (res?.error) {
         alert('Error: ' + res.error)
       } else {
         alert('Selected products deleted successfully.')
         setSelectedIds([])
         setPage(1)
-        router.refresh()
+        if (onProductsChanged) onProductsChanged()
       }
     }
   }
@@ -101,7 +101,7 @@ export function ProductsList({ products: initialProducts }: { products: any[] })
   const handleUpdateProduct = async () => {
     if (!editingProduct) return
     setIsUpdating(true)
-    const res = await updateProduct(editingProduct.id, {
+    const res = await updateProductLocal(editingProduct.id, {
       product_name: editName,
       price: editPrice,
       stock_quantity: editStock,
@@ -114,7 +114,7 @@ export function ProductsList({ products: initialProducts }: { products: any[] })
     } else {
       alert('Product updated successfully!')
       setEditingProduct(null)
-      router.refresh()
+      if (onProductsChanged) onProductsChanged()
     }
   }
 

@@ -15,16 +15,44 @@ interface InventoryClientProps {
   customers: any[]
 }
 
-export function InventoryClient({ products, itemSales: initialItemSales, customers }: InventoryClientProps) {
+export function InventoryClient() {
   const { locale } = useLanguage()
+  const [products, setProducts] = useState<any[]>([])
   const [sales, setSales] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  async function loadLocalData() {
+    try {
+      const { getProductsLocal } = await import('@/lib/products-local')
+      const res = await getProductsLocal()
+      if (res.products) {
+        setProducts(res.products)
+      }
+    } catch (e) {
+      console.error('Failed to load local products:', e)
+    }
+    setSales(itemSalesLocal.getAll())
+    setIsLoading(false)
+  }
 
   useEffect(() => {
-    // Load store sales client-side from localStorage
-    setSales(itemSalesLocal.getAll())
+    loadLocalData()
   }, [])
 
-  const refreshSalesList = () => {
+  const refreshProducts = async () => {
+    try {
+      const { getProductsLocal } = await import('@/lib/products-local')
+      const res = await getProductsLocal()
+      if (res.products) {
+        setProducts(res.products)
+      }
+    } catch (e) {
+      console.error('Failed to refresh local products:', e)
+    }
+  }
+
+  const refreshSalesAndProducts = async () => {
+    await refreshProducts()
     setSales(itemSalesLocal.getAll())
   }
 
@@ -46,21 +74,21 @@ export function InventoryClient({ products, itemSales: initialItemSales, custome
 
       <div className="flex-1 overflow-y-auto space-y-6 pr-1 pb-6 scrollbar-thin">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <AddProductForm />
+          <AddProductForm onProductAdded={refreshProducts} />
           <CreateItemSaleForm 
-            customers={customers} 
+            customers={[]} 
             products={products} 
-            onSaleRecorded={refreshSalesList} 
+            onSaleRecorded={refreshSalesAndProducts} 
           />
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 items-stretch">
           <div className="xl:col-span-1 flex flex-col h-full">
-            <ProductsList products={products} />
+            <ProductsList products={products} onProductsChanged={refreshProducts} />
           </div>
 
           <div className="xl:col-span-2 flex flex-col h-full">
-            <ItemSalesTable itemSales={sales} onSalesChanged={refreshSalesList} />
+            <ItemSalesTable itemSales={sales} onSalesChanged={refreshSalesAndProducts} />
           </div>
         </div>
       </div>

@@ -78,14 +78,14 @@ export function ItemSalesTable({
       : `Are you sure you want to delete the ${selectedIds.length} selected store sale records? This will refund their stock levels inside inventory.`
 
     if (confirm(confirmMsg)) {
-      const { refundProductStock } = await import('@/app/actions/inventory')
+      const { refundProductStockLocal } = await import('@/lib/products-local')
       const { itemSalesLocal } = await import('@/lib/item-sales-local')
       
       let errorHappened = false
       for (const id of selectedIds) {
         const sale = initialSales.find((s) => s.id === id)
         if (sale) {
-          const refundRes = await refundProductStock(sale.product_id, sale.quantity)
+          const refundRes = await refundProductStockLocal(sale.product_id, sale.quantity)
           if (refundRes?.error) {
             console.error(`Failed to refund stock for sale ${id}:`, refundRes.error)
             errorHappened = true
@@ -122,9 +122,9 @@ export function ItemSalesTable({
     
     const qtyDiff = editQty - editingSale.quantity
     
-    // 1. Adjust stock in MongoDB
-    const { adjustProductStock } = await import('@/app/actions/inventory')
-    const adjustRes = await adjustProductStock(editingSale.product_id, qtyDiff)
+    // 1. Adjust stock locally in IndexedDB
+    const { adjustProductStockLocal } = await import('@/lib/products-local')
+    const adjustRes = await adjustProductStockLocal(editingSale.product_id, qtyDiff)
     if (adjustRes?.error) {
       setIsUpdating(false)
       alert('Error adjusting stock: ' + adjustRes.error)
@@ -161,9 +161,9 @@ export function ItemSalesTable({
       : `Are you sure you want to delete this store sale of ${sale.product_name || sale.inventory?.product_name} for ${name}? This will refund the stock.`
        
     if (confirm(confirmMsg)) {
-      // 1. Refund stock in MongoDB
-      const { refundProductStock } = await import('@/app/actions/inventory')
-      const refundRes = await refundProductStock(sale.product_id, sale.quantity)
+      // 1. Refund stock locally in IndexedDB
+      const { refundProductStockLocal } = await import('@/lib/products-local')
+      const refundRes = await refundProductStockLocal(sale.product_id, sale.quantity)
       if (refundRes?.error) {
         alert('Error reverting stock: ' + refundRes.error)
         return

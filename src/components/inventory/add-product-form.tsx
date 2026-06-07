@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { addProduct } from '@/app/actions/inventory'
+import { addProductLocal } from '@/lib/products-local'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +19,7 @@ const productSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productSchema>
 
-export function AddProductForm() {
+export function AddProductForm({ onProductAdded }: { onProductAdded?: () => void }) {
   const { t, locale } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -44,7 +44,7 @@ export function AddProductForm() {
     setIsLoading(true)
     setMessage(null)
 
-    const response = await addProduct(data)
+    const response = await addProductLocal(data)
 
     if (response?.error) {
       setMessage({ type: 'error', text: response.error })
@@ -53,6 +53,7 @@ export function AddProductForm() {
         type: 'success', 
         text: locale === 'hi' ? 'उत्पाद सफलतापूर्वक जोड़ा गया!' : 'Product added successfully!' 
       })
+      if (onProductAdded) onProductAdded()
       reset({
         product_name: '',
         description: '',

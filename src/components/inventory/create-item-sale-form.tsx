@@ -150,13 +150,13 @@ export function CreateItemSaleForm({
     let errorsList: string[] = []
     const recordedSales: any[] = []
 
-    const { deductProductStock } = await import('@/app/actions/inventory')
+    const { deductProductStockLocal } = await import('@/lib/products-local')
     const { itemSalesLocal } = await import('@/lib/item-sales-local')
 
     // Record each item sale
     for (const item of cart) {
-      // 1. Deduct stock in MongoDB
-      const stockRes = await deductProductStock(item.product_id, item.quantity)
+      // 1. Deduct stock in local IndexedDB
+      const stockRes = await deductProductStockLocal(item.product_id, item.quantity)
       if (stockRes?.error) {
         errorsList.push(`${item.product_name}: ${stockRes.error}`)
         continue

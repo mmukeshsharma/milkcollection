@@ -43,16 +43,7 @@ async function createBackup(): Promise<void> {
     backup[store] = await dbGetAll(store)
   }
 
-  // Backup MongoDB products
-  try {
-    const { getProducts } = await import('@/app/actions/inventory')
-    const res = await getProducts()
-    if (res && res.products) {
-      backup[STORES.products] = res.products
-    }
-  } catch (e) {
-    console.error('Failed to backup MongoDB products:', e)
-  }
+  // Note: STORES.products is backed up client-side in the BACKUP_STORES loop above.
 
   // Backup local storage store sales
   if (typeof window !== 'undefined') {
@@ -110,7 +101,6 @@ async function restoreBackup(file: File): Promise<{ restored: number; errors: st
   const errors: string[] = []
 
   for (const store of BACKUP_STORES) {
-    if (store === STORES.products) continue // Handled separately via MongoDB server actions below
     const records: any[] = data[store]
     if (!Array.isArray(records)) continue
 
@@ -130,20 +120,7 @@ async function restoreBackup(file: File): Promise<{ restored: number; errors: st
     }
   }
 
-  // Restore MongoDB products
-  if (data[STORES.products] && Array.isArray(data[STORES.products])) {
-    try {
-      const { restoreProducts } = await import('@/app/actions/inventory')
-      const res = await restoreProducts(data[STORES.products])
-      if (res?.error) {
-        errors.push(`MongoDB products: ${res.error}`)
-      } else {
-        restored += data[STORES.products].length
-      }
-    } catch (e: any) {
-      errors.push(`MongoDB products: ${e.message}`)
-    }
-  }
+  // Note: STORES.products is restored client-side in the BACKUP_STORES loop above.
 
   // Restore local storage store sales
   if (typeof window !== 'undefined' && data['_local_store_sales']) {
