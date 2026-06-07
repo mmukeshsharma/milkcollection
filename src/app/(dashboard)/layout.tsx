@@ -250,8 +250,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 key={link.href}
                 href={link.href}
                 className={`block rounded-xl px-4 py-2.5 transition ${active
-                    ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600 pl-3'
-                    : 'hover:bg-blue-50/50 hover:text-slate-800'
+                  ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600 pl-3'
+                  : 'hover:bg-blue-50/50 hover:text-slate-800'
                   }`}
               >
                 {t(link.labelKey)}
@@ -286,7 +286,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   </span>
                   <span className="text-[9px] sm:text-[10px] font-bold text-[#0084FF] mt-0.5 tracking-wider uppercase">
                     {isSuperAdmin
-                      ? (locale === 'hi' ? 'सुपर एडमिन' : 'Super Admin')
+                      ? (locale === 'hi' ? 'एडमिन' : 'Admin')
                       : (locale === 'hi' ? 'एजेंट' : 'Agent')}
                   </span>
                 </div>
