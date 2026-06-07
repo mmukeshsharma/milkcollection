@@ -267,21 +267,29 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="flex h-16 items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-3">
               <Image src="/logo.png" alt="Sharma Dairy" width={32} height={32} className="rounded-lg border border-blue-100 lg:hidden" />
-              <div className="font-bold text-slate-700 text-xs sm:text-sm md:text-base whitespace-nowrap">
-                {isSuperAdmin
-                  ? (locale === 'hi' ? 'शर्मा डेयरी इक्विपमेंट्स' : 'Sharma Dairy Equipments')
-                  : t('header.operationsDashboard')}
+              <div className="flex flex-col text-left leading-tight shrink-0">
+                <span className="font-extrabold text-slate-700 text-xs sm:text-sm tracking-tight whitespace-nowrap">
+                  {locale === 'hi' ? 'शर्मा डेयरी' : 'Sharma Dairy'}
+                </span>
+                <span className="font-bold text-[9px] sm:text-xs text-[#0084FF] tracking-wider uppercase whitespace-nowrap">
+                  {locale === 'hi' ? 'इक्विपमेंट्स' : 'Equipments'}
+                </span>
               </div>
             </div>
 
             {/* Desktop Header Actions */}
-            <div className="flex items-center space-x-1.5 sm:space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {user && (
-                <span className="text-[10px] sm:text-xs font-bold bg-blue-50 text-blue-700 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-blue-100 whitespace-nowrap shrink-0">
-                  {user.name ? user.name.split(' ')[0] : ''} ({isSuperAdmin
-                    ? (locale === 'hi' ? 'सुपर एडमिन' : 'Super Admin')
-                    : (locale === 'hi' ? 'एजेंट' : 'Agent')})
-                </span>
+                <div className="flex flex-col text-right leading-none shrink-0 min-w-0 pr-2 sm:pr-4 border-r border-slate-200">
+                  <span className="text-[11px] sm:text-xs font-extrabold text-slate-800 tracking-tight truncate max-w-[85px] sm:max-w-[120px]">
+                    {user.name ? user.name.split(' ')[0] : ''}
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-[#0084FF] mt-0.5 tracking-wider uppercase">
+                    {isSuperAdmin
+                      ? (locale === 'hi' ? 'सुपर एडमिन' : 'Super Admin')
+                      : (locale === 'hi' ? 'एजेंट' : 'Agent')}
+                  </span>
+                </div>
               )}
               <LanguageSelector />
               <LogoutButton />
