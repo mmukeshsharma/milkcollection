@@ -8,17 +8,23 @@ const PRECACHE_ASSETS = [
   '/manifest.webmanifest',
 ];
 
-// Helper to determine cache key based on Next.js RSC headers
+// Helper to determine cache key based on Next.js RSC headers, stripping other query params
 function getCacheKey(request) {
+  const url = new URL(request.url);
   const isRSC = request.headers.has('RSC') || 
                 request.headers.has('rsc') || 
-                request.headers.has('Next-Router-State-Tree');
-  if (isRSC) {
-    // Append a suffix to avoid caching conflict between HTML and RSC components
-    return new Request(request.url + (request.url.includes('?') ? '&' : '?') + '_rsc=1');
-  }
-  return request;
+                request.headers.has('Next-Router-State-Tree') ||
+                url.searchParams.has('_rsc');
+  
+  // Strip dynamic query params (like customer_id) to ensure offline fallback works,
+  // but keep the RSC suffix to distinguish between HTML and RSC component payloads.
+  const cleanUrl = url.origin + url.pathname + (isRSC ? '?_rsc=1' : '');
+  return new Request(cleanUrl);
 }
+
+// self.addEventListener('install', ...) code follows below in the file
+// We need to keep the event listeners exactly as they are, but update the catch block.
+
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -80,8 +86,12 @@ self.addEventListener('fetch', (event) => {
           .catch(() => {
             return caches.match(cacheKey).then((cachedResponse) => {
               if (cachedResponse) return cachedResponse;
-              // If page navigation fails entirely, fallback to cached root page
-              if (isNavigation) return caches.match('/');
+              // If page navigation fails entirely, fallback to cached dashboard or root page
+              if (isNavigation) {
+                return caches.match('/dashboard').then((dash) => {
+                  return dash || caches.match('/');
+                });
+              }
             });
           })
       );

@@ -1,7 +1,8 @@
-export const dynamic = 'force-dynamic'
+'use client'
 
 import { InventoryClient } from '@/components/inventory/inventory-client'
 
-export default async function InventoryPage() {
+export default function InventoryPage() {
   return <InventoryClient />
 }
+

@@ -6,12 +6,13 @@ import Image from 'next/image'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { LanguageSelector } from '@/components/ui/language-selector'
 import { useLanguage } from '@/context/LanguageContext'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { getSessionUser } from '@/app/actions/auth'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t, locale } = useLanguage()
   const pathname = usePathname()
+  const router = useRouter()
   const [user, setUser] = useState<{ role: string; name: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [deactivated, setDeactivated] = useState(false)
@@ -133,6 +134,37 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }, 1000)
     return () => clearInterval(timer)
   }, [expired])
+
+  // Prefetch all dashboard pages dynamically so they are cached by service worker for offline use
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.onLine && user) {
+      const routes = (user.role === 'super_admin' || user.role === 'admin')
+        ? ['/dashboard', '/agent-management', '/settings']
+        : [
+            '/dashboard',
+            '/members',
+            '/purchase',
+            '/dashboard/milk-rates',
+            '/sale',
+            '/payments',
+            '/passbook',
+            '/reports',
+            '/inventory',
+            '/settings'
+          ]
+      
+      const timer = setTimeout(() => {
+        routes.forEach(route => {
+          try {
+            router.prefetch(route)
+          } catch (e) {
+            console.warn('Failed to prefetch route:', route, e)
+          }
+        })
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [router, user])
 
   // Dynamic Navigation Links based on User Role
   const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin'
