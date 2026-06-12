@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sharma-dairy-v1';
+const CACHE_NAME = 'sharma-dairy-cache-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/login',
@@ -8,25 +8,34 @@ const PRECACHE_ASSETS = [
   '/manifest.webmanifest',
 ];
 
-// Install event: cache precached assets
+// Helper to determine cache key based on Next.js RSC headers
+function getCacheKey(request) {
+  const isRSC = request.headers.has('RSC') || 
+                request.headers.has('rsc') || 
+                request.headers.has('Next-Router-State-Tree');
+  if (isRSC) {
+    // Append a suffix to avoid caching conflict between HTML and RSC components
+    return new Request(request.url + (request.url.includes('?') ? '&' : '?') + '_rsc=1');
+  }
+  return request;
+}
+
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS);
-    }).then(() => {
-      return self.skipWaiting();
     })
   );
 });
 
-// Activate event: clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) {
-            return caches.delete(name);
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
           }
         })
       );
@@ -36,62 +45,66 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event: network first for pages, cache first for static assets
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Only handle GET requests and local requests
-  if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) {
+  // Bypass POST/PUT/DELETE, API calls, and Next.js Server Actions
+  if (
+    request.method !== 'GET' ||
+    url.pathname.startsWith('/api') ||
+    request.headers.has('next-action')
+  ) {
     return;
   }
 
-  // Bypassing API routes and next server actions
-  if (url.pathname.startsWith('/api') || request.headers.has('x-nextjs-data') || request.headers.has('next-action')) {
-    return;
-  }
+  // Handle local application routes and assets
+  if (url.origin === self.location.origin) {
+    const isNavigation = request.mode === 'navigate';
+    const isRSC = request.headers.has('RSC') || request.headers.has('rsc');
 
-  // Network-First strategy for pages/routes
-  if (request.mode === 'navigate') {
+    // Pages & RSC data payloads: Network-First falling back to Cache
+    if (isNavigation || isRSC) {
+      const cacheKey = getCacheKey(request);
+      event.respondWith(
+        fetch(request)
+          .then((response) => {
+            if (response.status === 200) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(cacheKey, copy);
+              });
+            }
+            return response;
+          })
+          .catch(() => {
+            return caches.match(cacheKey).then((cachedResponse) => {
+              if (cachedResponse) return cachedResponse;
+              // If page navigation fails entirely, fallback to cached root page
+              if (isNavigation) return caches.match('/');
+            });
+          })
+      );
+      return;
+    }
+
+    // Static assets (Next.js chunks, CSS, images, public files): Cache-First falling back to Network
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache a copy of the page
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, copy);
-          });
-          return response;
-        })
-        .catch(() => {
-          // If offline, serve from cache
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) return cachedResponse;
-            // Fallback to caching root page
-            return caches.match('/');
-          });
-        })
-    );
-    return;
-  }
-
-  // Cache-First strategy for static assets (js, css, images, fonts)
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(request).then((response) => {
-        // Cache dynamic assets on the fly
-        if (response.status === 200) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, copy);
-          });
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-        return response;
-      });
-    })
-  );
+
+        return fetch(request).then((response) => {
+          if (response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, copy);
+            });
+          }
+          return response;
+        });
+      })
+    );
+  }
 });
