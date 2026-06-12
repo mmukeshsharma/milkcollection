@@ -25,6 +25,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
     async function loadUser(isSilent = false) {
       try {
+        if (typeof window !== 'undefined' && !navigator.onLine) {
+          const cached = localStorage.getItem('sharma_dairy_cached_user')
+          if (cached) {
+            setUser(JSON.parse(cached))
+            if (!isSilent) setLoading(false)
+            return
+          }
+        }
+
         const currUser = await getSessionUser()
         if (currUser) {
           if (currUser.error === 'DEACTIVATED' || currUser.error === 'FORCE_LOGOUT') {
@@ -40,14 +49,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             return
           }
           setUser(currUser)
+          localStorage.setItem('sharma_dairy_cached_user', JSON.stringify(currUser))
           lastCheckTime = Date.now()
         } else {
           // Instantly redirect to login if session becomes invalid or account is deactivated
-          window.location.href = '/login?message=Session+invalidated+or+account+deactivated'
+          if (typeof window !== 'undefined' && navigator.onLine) {
+            window.location.href = '/login?message=Session+invalidated+or+account+deactivated'
+          }
         }
       } catch (e) {
         console.error('Error loading session user:', e)
-        if (!isSilent) window.location.href = '/login'
+        if (typeof window !== 'undefined' && !navigator.onLine) {
+          const cached = localStorage.getItem('sharma_dairy_cached_user')
+          if (cached) {
+            setUser(JSON.parse(cached))
+            if (!isSilent) setLoading(false)
+            return
+          }
+        }
+        if (!isSilent && typeof window !== 'undefined' && navigator.onLine) {
+          window.location.href = '/login'
+        }
       } finally {
         if (!isSilent) setLoading(false)
       }
