@@ -1,0 +1,57 @@
+name: Build Android APK
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Export Next.js Static Pages
+        env:
+          STATIC_EXPORT: "true"
+        run: npm run build
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Install Capacitor CLI & Platform
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Initialize Android native folder
+        run: |
+          npx cap add android
+
+      - name: Sync Web Code to Native App
+        run: |
+          npx cap sync
+
+      - name: Build APK via Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Compiled APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: sharma-dairy-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk

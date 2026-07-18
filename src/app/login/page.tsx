@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { LoginForm } from '@/components/auth/login-form'
 import { LanguageSelector } from '@/components/ui/language-selector'
+import { MobileApkPromo } from '@/components/auth/MobileApkPromo'
 
 export default async function LoginPage({ 
   searchParams 
@@ -55,6 +56,9 @@ export default async function LoginPage({
       {/* Main Content Area: High density alignment to prevent scrollbars */}
       <div className="relative z-10 w-full max-w-[520px] flex flex-col items-center justify-center">
         
+        {/* Mobile APK Promotion Banner and Popup (only renders on mobile browsers) */}
+        <MobileApkPromo />
+
         {/* Login Form Card: contains logo, title, phone, language selector, and login fields */}
         <div className="relative w-full rounded-[24px] bg-white p-6 shadow-[0_16px_48px_rgba(28,76,138,0.09)] border border-slate-100/50 transition-all duration-300">
           
