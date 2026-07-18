@@ -1,6 +1,9 @@
 {
   "appId": "com.sharmadairy.milkcollection",
   "appName": "Sharma Dairy",
-  "webDir": "out",
-  "bundledWebRuntime": false
+  "webDir": "public",
+  "server": {
+    "url": "https://sharmadairy.vercel.app",
+    "cleartext": true
+  }
 }

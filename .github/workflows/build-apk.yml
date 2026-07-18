@@ -1,7 +1,9 @@
 name: Build Android APK
+
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,11 +20,6 @@ jobs:
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Export Next.js Static Pages
-        env:
-          STATIC_EXPORT: "true"
-        run: npm run build
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -32,13 +29,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
-      - name: Initialize Android native folder
-        run: |
-          npx cap add android
+      - name: Initialize Android Platform
+        run: npx cap add android
 
-      - name: Sync Web Code to Native App
-        run: |
-          npx cap sync
+      - name: Sync Capacitor Config
+        run: npx cap sync
 
       - name: Build APK via Gradle
         run: |
