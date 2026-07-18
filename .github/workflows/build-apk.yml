@@ -13,10 +13,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Export Next.js Static Pages
         env:
@@ -31,10 +31,6 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
-
-      - name: Install Capacitor CLI & Platform
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Initialize Android native folder
         run: |
