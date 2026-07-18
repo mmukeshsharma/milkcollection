@@ -23,13 +23,20 @@ export default function SalePage() {
     reload().finally(() => setLoading(false))
   }, [])
 
+  // Calculate today's summary metrics
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const todaySales = sales.filter(
+    (s) => (s.sale_date || s.created_at || '').slice(0, 10) === todayIso
+  )
+  const todayTotalAmount = todaySales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0)
+  const todayLiters = todaySales.reduce((sum, s) => sum + Number(s.quantity_liters || 0), 0)
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">Milk Sales</h1>
-          <p className="text-sm text-slate-600">Record and track bulk milk sales to external buyers or local farmers.</p>
-        </div>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-200/60 pb-2">
+        <h1 className="text-lg font-black text-slate-800 sm:text-2xl min-w-0 truncate">
+          Milk Sales <span className="text-[#0084FF] ml-1">₹{todayTotalAmount.toLocaleString('en-IN')}</span> <span className="text-slate-300 px-1 font-normal">|</span> <span className="text-emerald-600">{todayLiters.toFixed(2)} Ltr</span>
+        </h1>
         <Button
           variant="outline"
           size="icon"
@@ -39,10 +46,10 @@ export default function SalePage() {
             setLoading(false)
           }}
           disabled={loading}
-          className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 h-9 w-9 shadow-sm"
+          className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 h-8 w-8 sm:h-9 sm:w-9 shadow-sm shrink-0"
           title="Refresh List"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 

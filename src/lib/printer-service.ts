@@ -631,6 +631,82 @@ export function triggerSystemPrint(htmlContent: string, paperWidth: '58mm' | '80
   })
 }
 
+// ─── Canvas rendering and ESC/POS bit image helper functions ──────────────────
+
+function renderTextToCanvas(text: string, settings: PrinterSettings): HTMLCanvasElement {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')!
+
+  const is58mm = settings.paperWidth === '58mm'
+  const canvasWidth = is58mm ? 384 : 576
+  const fontSize = 20
+  const lineHeight = 26
+
+  const lines = text.split('\n')
+  const newlineCount = Math.max(0, Math.round((settings.paperFeedAfterPrint ?? 5) / 4))
+  const totalLines = lines.length + newlineCount
+  const height = totalLines * lineHeight + 20
+
+  canvas.width = canvasWidth
+  canvas.height = height
+
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillRect(0, 0, canvasWidth, height)
+
+  ctx.fillStyle = '#000000'
+  ctx.font = `bold ${fontSize}px "Courier New", Courier, "Noto Sans Devanagari", monospace`
+  ctx.textBaseline = 'top'
+
+  lines.forEach((line, index) => {
+    const yOffset = index * lineHeight + 10
+    ctx.fillText(line, 0, yOffset)
+  })
+
+  return canvas
+}
+
+function canvasToEscPos(canvas: HTMLCanvasElement): Uint8Array {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return new Uint8Array()
+
+  const width = canvas.width
+  const height = canvas.height
+  const imgData = ctx.getImageData(0, 0, width, height)
+  const data = imgData.data
+
+  const widthBytes = width / 8
+  const escPosData: number[] = []
+
+  // ESC/POS header for raster image: GS v 0 0
+  // GS = 29 (0x1D), v = 118 (0x76), 0 = 48 (0x30), m = 0 (0x00)
+  escPosData.push(0x1D, 0x76, 0x30, 0x00)
+  escPosData.push(widthBytes & 0xFF, (widthBytes >> 8) & 0xFF)
+  escPosData.push(height & 0xFF, (height >> 8) & 0xFF)
+
+  for (let y = 0; y < height; y++) {
+    for (let xByte = 0; xByte < widthBytes; xByte++) {
+      let byteVal = 0
+      for (let bit = 0; bit < 8; bit++) {
+        const x = xByte * 8 + bit
+        const pixelIdx = (y * width + x) * 4
+        const r = data[pixelIdx]
+        const g = data[pixelIdx + 1]
+        const b = data[pixelIdx + 2]
+        const a = data[pixelIdx + 3]
+
+        const isWhite = a < 128 || (0.299 * r + 0.587 * g + 0.114 * b) > 160
+
+        if (!isWhite) {
+          byteVal |= (1 << (7 - bit))
+        }
+      }
+      escPosData.push(byteVal)
+    }
+  }
+
+  return new Uint8Array(escPosData)
+}
+
 // ─── Web Bluetooth ESC/POS (GATT) ────────────────────────────────────────────
 
 export async function triggerBluetoothPrint(
@@ -760,12 +836,21 @@ export async function triggerBluetoothPrint(
     await writeChar.writeValue(initCmd)
     await writeChar.writeValue(alignLft)
 
-    // Dynamic feed newlines (1 newline ≈ 4mm)
-    const newlineCount = Math.max(0, Math.round((settings.paperFeedAfterPrint ?? 5) / 4))
-    const textBytes = encoder.encode(plainText + '\n'.repeat(newlineCount))
-    const CHUNK = 512
-    for (let i = 0; i < textBytes.length; i += CHUNK) {
-      await writeChar.writeValue(textBytes.slice(i, i + CHUNK))
+    const hasHindi = /[\u0900-\u097F]/.test(plainText)
+    let dataBytes: Uint8Array
+
+    if (hasHindi && typeof document !== 'undefined') {
+      const canvas = renderTextToCanvas(plainText, settings)
+      dataBytes = canvasToEscPos(canvas)
+    } else {
+      const newlineCount = Math.max(0, Math.round((settings.paperFeedAfterPrint ?? 5) / 4))
+      dataBytes = encoder.encode(plainText + '\n'.repeat(newlineCount))
+    }
+
+    const CHUNK = 256
+    for (let i = 0; i < dataBytes.length; i += CHUNK) {
+      await writeChar.writeValue(dataBytes.slice(i, i + CHUNK))
+      await new Promise((resolve) => setTimeout(resolve, 5))
     }
     await writeChar.writeValue(cutCmd)
     await server.disconnect()

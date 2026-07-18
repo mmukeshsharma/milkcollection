@@ -18,7 +18,7 @@ import { Pagination } from '@/components/ui/pagination'
 
 export default function RateChartDashboardPage() {
   const { t, locale } = useLanguage()
-  
+
   // Dynamic page title sync
   useEffect(() => {
     document.title = locale === 'hi' ? 'रेट चार्ट | शर्मा डेयरी' : 'Rate Chart | Sharma Dairy'
@@ -36,7 +36,7 @@ export default function RateChartDashboardPage() {
   // Form View States
   const [view, setView] = useState<'list' | 'create' | 'edit'>('list')
   const [editingId, setEditingId] = useState<string | null>(null)
-  
+
   // Custom Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
@@ -51,8 +51,8 @@ export default function RateChartDashboardPage() {
   const [cards, setCards] = useState<RateChartInput['cards']>([
     {
       card_name: 'Card 1',
-      fat_steps: [{ min_val: 2.0, max_val: 5.0, rate: 38.00 }],
-      snf_steps: [{ min_val: 8.0, max_val: 10.0, rate: 12.00 }],
+      fat_steps: [{ min_val: 2.0, max_val: 5.0, rate: 0.00 }],
+      snf_steps: [{ min_val: 8.0, max_val: 10.0, rate: 0.00 }],
       fat_bonus: [{ base_val: 4.0, bonus_rate: 0.10, penalty_rate: 0.15, step_size: 0.1 }],
       snf_bonus: [{ base_val: 8.5, bonus_rate: 0.12, penalty_rate: 0.20, step_size: 0.1 }]
     }
@@ -61,10 +61,10 @@ export default function RateChartDashboardPage() {
   // Form Inline Adders States
   const [newFatMin, setNewFatMin] = useState(2.0)
   const [newFatMax, setNewFatMax] = useState(5.0)
-  const [newFatRate, setNewFatRate] = useState(38.0)
+  const [newFatRate, setNewFatRate] = useState(9.0)
   const [newSnfMin, setNewSnfMin] = useState(8.0)
   const [newSnfMax, setNewSnfMax] = useState(10.0)
-  const [newSnfRate, setNewSnfRate] = useState(12.0)
+  const [newSnfRate, setNewSnfRate] = useState(0.0)
 
   // Excel / JSON Import/Backup State
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -106,8 +106,8 @@ export default function RateChartDashboardPage() {
     setCards([
       {
         card_name: 'Card 1',
-        fat_steps: [{ min_val: 2.0, max_val: 5.0, rate: 38.00 }],
-        snf_steps: [{ min_val: 8.0, max_val: 10.0, rate: 12.00 }],
+        fat_steps: [{ min_val: 2.0, max_val: 5.0, rate: 0.00 }],
+        snf_steps: [{ min_val: 8.0, max_val: 10.0, rate: 0.00 }],
         fat_bonus: [{ base_val: 4.0, bonus_rate: 0.10, penalty_rate: 0.15, step_size: 0.1 }],
         snf_bonus: [{ base_val: 8.5, bonus_rate: 0.12, penalty_rate: 0.20, step_size: 0.1 }]
       }
@@ -184,20 +184,18 @@ export default function RateChartDashboardPage() {
 
   // FAT Step management
   function addFatStep(cardIdx: number) {
-    const card = cards[cardIdx]
-    // Check overlaps
-    const overlaps = card.fat_steps.some(s => newFatMin <= s.max_val && newFatMax >= s.min_val)
-    if (overlaps) {
-      showToast(t('rates.invalidFat') + ' (Overlaps)', 'error')
-      return
-    }
-    if (newFatMax < newFatMin || newFatRate <= 0) {
+    if (newFatMax < newFatMin || newFatRate < 0) {
       showToast(t('rates.invalidFat'), 'error')
       return
     }
     const updated = [...cards]
-    updated[cardIdx].fat_steps.push({ min_val: newFatMin, max_val: newFatMax, rate: newFatRate })
+    // Clear previous entries and add the new selected entry
+    updated[cardIdx].fat_steps = [{ min_val: newFatMin, max_val: newFatMax, rate: newFatRate }]
     setCards(updated)
+    // Clear/reset temporary inputs
+    setNewFatMin(2.0)
+    setNewFatMax(5.0)
+    setNewFatRate(9.0)
   }
 
   function deleteFatStep(cardIdx: number, stepIdx: number) {
@@ -208,20 +206,18 @@ export default function RateChartDashboardPage() {
 
   // SNF Step management
   function addSnfStep(cardIdx: number) {
-    const card = cards[cardIdx]
-    // Check overlaps
-    const overlaps = card.snf_steps.some(s => newSnfMin <= s.max_val && newSnfMax >= s.min_val)
-    if (overlaps) {
-      showToast(t('rates.invalidSnf') + ' (Overlaps)', 'error')
-      return
-    }
-    if (newSnfMax < newSnfMin || newSnfRate <= 0) {
+    if (newSnfMax < newSnfMin || newSnfRate < 0) {
       showToast(t('rates.invalidSnf'), 'error')
       return
     }
     const updated = [...cards]
-    updated[cardIdx].snf_steps.push({ min_val: newSnfMin, max_val: newSnfMax, rate: newSnfRate })
+    // Clear previous entries and add the new selected entry
+    updated[cardIdx].snf_steps = [{ min_val: newSnfMin, max_val: newSnfMax, rate: newSnfRate }]
     setCards(updated)
+    // Clear/reset temporary inputs
+    setNewSnfMin(8.0)
+    setNewSnfMax(10.0)
+    setNewSnfRate(0.0)
   }
 
   function deleteSnfStep(cardIdx: number, stepIdx: number) {
@@ -290,14 +286,14 @@ export default function RateChartDashboardPage() {
   async function handleFileImport(file: File) {
     setImportError('')
     setImporting(true)
-    
+
     const fileReader = new FileReader()
     const isJson = file.name.endsWith('.json')
     const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
-    
+
     if (!isJson && !isExcel) {
-      setImportError(locale === 'hi' 
-        ? 'कृपया केवल .xlsx, .xls या .json फ़ाइल अपलोड करें।' 
+      setImportError(locale === 'hi'
+        ? 'कृपया केवल .xlsx, .xls या .json फ़ाइल अपलोड करें।'
         : 'Please upload only .xlsx, .xls, or .json files.'
       )
       setImporting(false)
@@ -344,9 +340,9 @@ export default function RateChartDashboardPage() {
         if (errorsList.length > 0) {
           if (importedCount > 0) {
             showToast(
-              locale === 'hi' 
-                ? `${importedCount} चार्ट आयात किए गए, कुछ विफल रहे।` 
-                : `${importedCount} charts imported. Some failed.`, 
+              locale === 'hi'
+                ? `${importedCount} चार्ट आयात किए गए, कुछ विफल रहे।`
+                : `${importedCount} charts imported. Some failed.`,
               'error'
             )
             setImportError(errorsList.join(' | '))
@@ -355,15 +351,15 @@ export default function RateChartDashboardPage() {
           }
         } else {
           showToast(
-            locale === 'hi' 
-              ? `${importedCount} चार्ट सफलतापूर्वक आयात किए गए!` 
-              : `Successfully imported ${importedCount} charts!`, 
+            locale === 'hi'
+              ? `${importedCount} चार्ट सफलतापूर्वक आयात किए गए!`
+              : `Successfully imported ${importedCount} charts!`,
             'success'
           )
           setIsImportOpen(false)
           setSelectedFile(null)
         }
-        
+
         fetchCharts()
       } catch (err: any) {
         setImportError(err.message || (locale === 'hi' ? 'फ़ाइल पार्स करने में त्रुटि।' : 'Error parsing backup file.'))
@@ -445,7 +441,7 @@ export default function RateChartDashboardPage() {
           </div>
 
           {/* KPIs Overview */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/40 bg-white/75 p-5 shadow-xl backdrop-blur-xl transition-all hover:-translate-y-1 hover:shadow-2xl">
               <div className="mb-3 h-1.5 w-12 rounded-full bg-blue-600" />
               <p className="text-xs text-slate-500 font-bold uppercase">{t('rates.activeCowRules')}</p>
@@ -466,11 +462,6 @@ export default function RateChartDashboardPage() {
               <p className="mt-1 text-2xl font-bold text-indigo-600">
                 {charts.length} {t('rates.total')}
               </p>
-            </div>
-            <div className="rounded-2xl border border-white/40 bg-white/75 p-5 shadow-xl backdrop-blur-xl transition-all hover:-translate-y-1 hover:shadow-2xl">
-              <div className="mb-3 h-1.5 w-12 rounded-full bg-amber-500" />
-              <p className="text-xs text-slate-500 font-bold uppercase">{t('rates.activeStatus')}</p>
-              <p className="mt-1 text-2xl font-bold text-amber-600">{t('rates.dynamicLookup')}</p>
             </div>
           </section>
 
@@ -563,22 +554,20 @@ export default function RateChartDashboardPage() {
                     paginatedCharts.map((chart) => (
                       <tr
                         key={chart.id}
-                        className={`border-b hover:bg-slate-50/70 transition ${
-                          chart.status === 'inactive' ? 'opacity-60 bg-slate-50/20' : ''
-                        }`}
+                        className={`border-b hover:bg-slate-50/70 transition ${chart.status === 'inactive' ? 'opacity-60 bg-slate-50/20' : ''
+                          }`}
                       >
                         <td className="px-4 py-3 font-bold text-slate-800">
                           {chart.chart_name}
                         </td>
                         <td className="px-4 py-3 font-semibold">
                           <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${
-                              chart.milk_type === 'cow'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : chart.milk_type === 'buffalo'
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${chart.milk_type === 'cow'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : chart.milk_type === 'buffalo'
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                            }`}
+                              }`}
                           >
                             {chart.milk_type === 'cow' ? t('rates.cowMilk') : chart.milk_type === 'buffalo' ? t('rates.buffaloMilk') : t('rates.mixedMilk')}
                           </span>
@@ -602,11 +591,10 @@ export default function RateChartDashboardPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                              chart.status === 'active'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-slate-100 text-slate-800'
-                            }`}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${chart.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-slate-100 text-slate-800'
+                              }`}
                           >
                             {chart.status === 'active' ? t('rates.active') : t('rates.inactive')}
                           </span>
@@ -708,7 +696,7 @@ export default function RateChartDashboardPage() {
                 <h3 className="font-bold text-slate-800 border-b pb-2">
                   {locale === 'hi' ? 'मूल कॉन्फ़िगरेशन' : 'Basic Configurations'}
                 </h3>
-                
+
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="chartName">{t('rates.chartName')}</Label>
@@ -743,11 +731,10 @@ export default function RateChartDashboardPage() {
                           key={type}
                           type="button"
                           onClick={() => setMilkType(type)}
-                          className={`py-2 px-3 rounded-lg border text-xs font-bold transition uppercase ${
-                            milkType === type
-                              ? 'bg-blue-50 border-blue-500 text-blue-700'
-                              : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
-                          }`}
+                          className={`py-2 px-3 rounded-lg border text-xs font-bold transition uppercase ${milkType === type
+                            ? 'bg-blue-50 border-blue-500 text-blue-700'
+                            : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
+                            }`}
                         >
                           {type === 'cow' ? t('rates.cowMilk') : type === 'buffalo' ? t('rates.buffaloMilk') : t('rates.mixedMilk')}
                         </button>
@@ -842,7 +829,7 @@ export default function RateChartDashboardPage() {
                             🐄 {t('rates.fatSteps')}
                           </Label>
                         </div>
-                        
+
                         {/* Fat steps input adder */}
                         <div className="flex gap-1 items-end bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                           <div className="space-y-0.5 flex-1 min-w-0">
@@ -851,7 +838,7 @@ export default function RateChartDashboardPage() {
                               type="number"
                               step="0.1"
                               value={newFatMin}
-                              onChange={(e) => setNewFatMin(parseFloat(e.target.value) || 0)}
+                              onChange={(e) => setNewFatMin(Math.max(0, parseFloat(e.target.value) || 0))}
                               className="h-8 text-xs bg-white"
                             />
                           </div>
@@ -861,7 +848,7 @@ export default function RateChartDashboardPage() {
                               type="number"
                               step="0.1"
                               value={newFatMax}
-                              onChange={(e) => setNewFatMax(parseFloat(e.target.value) || 0)}
+                              onChange={(e) => setNewFatMax(Math.max(0, parseFloat(e.target.value) || 0))}
                               className="h-8 text-xs bg-white"
                             />
                           </div>
@@ -871,7 +858,7 @@ export default function RateChartDashboardPage() {
                               type="number"
                               step="0.5"
                               value={newFatRate}
-                              onChange={(e) => setNewFatRate(parseFloat(e.target.value) || 0)}
+                              onChange={(e) => setNewFatRate(Math.max(0, parseFloat(e.target.value) || 0))}
                               className="h-8 text-xs bg-white font-bold"
                             />
                           </div>
@@ -927,7 +914,7 @@ export default function RateChartDashboardPage() {
                               type="number"
                               step="0.1"
                               value={newSnfMin}
-                              onChange={(e) => setNewSnfMin(parseFloat(e.target.value) || 0)}
+                              onChange={(e) => setNewSnfMin(Math.max(0, parseFloat(e.target.value) || 0))}
                               className="h-8 text-xs bg-white"
                             />
                           </div>
@@ -937,7 +924,7 @@ export default function RateChartDashboardPage() {
                               type="number"
                               step="0.1"
                               value={newSnfMax}
-                              onChange={(e) => setNewSnfMax(parseFloat(e.target.value) || 0)}
+                              onChange={(e) => setNewSnfMax(Math.max(0, parseFloat(e.target.value) || 0))}
                               className="h-8 text-xs bg-white"
                             />
                           </div>
@@ -947,7 +934,7 @@ export default function RateChartDashboardPage() {
                               type="number"
                               step="0.5"
                               value={newSnfRate}
-                              onChange={(e) => setNewSnfRate(parseFloat(e.target.value) || 0)}
+                              onChange={(e) => setNewSnfRate(Math.max(0, parseFloat(e.target.value) || 0))}
                               className="h-8 text-xs bg-white font-bold"
                             />
                           </div>
@@ -994,22 +981,37 @@ export default function RateChartDashboardPage() {
                         <span className="text-xs font-bold text-slate-700 block">
                           📈 {t('rates.bonusPenalty')}
                         </span>
-                        
+
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           {/* FAT Bonus Config */}
                           <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-2">
-                            <span className="text-[11px] font-bold text-blue-700 block uppercase">
-                              🐄 {t('rates.fatBonusPenalty')}
-                            </span>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-blue-700 block uppercase">
+                                🐄 {t('rates.fatBonusPenalty')}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateBonusConfig(cardIdx, 'fat', 'base_val', 0)
+                                  updateBonusConfig(cardIdx, 'fat', 'step_size', 0)
+                                  updateBonusConfig(cardIdx, 'fat', 'bonus_rate', 0)
+                                  updateBonusConfig(cardIdx, 'fat', 'penalty_rate', 0)
+                                }}
+                                className="h-5 w-5 flex items-center justify-center rounded-md bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 transition text-[10px] font-black"
+                                title="Clear FAT parameters to 0"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2.5 text-xs">
                               <div className="space-y-0.5">
                                 <span className="text-[10px] text-slate-500 block font-semibold">{t('rates.baseVal')} (FAT)</span>
                                 <Input
                                   type="number"
                                   step="0.1"
                                   value={card.fat_bonus[0]?.base_val ?? 4.0}
-                                  onChange={(e) => updateBonusConfig(cardIdx, 'fat', 'base_val', parseFloat(e.target.value) || 0)}
-                                  className="h-8 text-xs bg-white"
+                                  onChange={(e) => updateBonusConfig(cardIdx, 'fat', 'base_val', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="h-8 text-xs bg-white w-full"
                                 />
                               </div>
                               <div className="space-y-0.5">
@@ -1018,8 +1020,8 @@ export default function RateChartDashboardPage() {
                                   type="number"
                                   step="0.05"
                                   value={card.fat_bonus[0]?.step_size ?? 0.1}
-                                  onChange={(e) => updateBonusConfig(cardIdx, 'fat', 'step_size', parseFloat(e.target.value) || 0)}
-                                  className="h-8 text-xs bg-white"
+                                  onChange={(e) => updateBonusConfig(cardIdx, 'fat', 'step_size', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="h-8 text-xs bg-white w-full"
                                 />
                               </div>
                               <div className="space-y-0.5">
@@ -1028,8 +1030,8 @@ export default function RateChartDashboardPage() {
                                   type="number"
                                   step="0.05"
                                   value={card.fat_bonus[0]?.bonus_rate ?? 0.10}
-                                  onChange={(e) => updateBonusConfig(cardIdx, 'fat', 'bonus_rate', parseFloat(e.target.value) || 0)}
-                                  className="h-8 text-xs bg-white font-semibold text-emerald-600"
+                                  onChange={(e) => updateBonusConfig(cardIdx, 'fat', 'bonus_rate', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="h-8 text-xs bg-white font-semibold text-emerald-600 w-full"
                                 />
                               </div>
                               <div className="space-y-0.5">
@@ -1038,8 +1040,8 @@ export default function RateChartDashboardPage() {
                                   type="number"
                                   step="0.05"
                                   value={card.fat_bonus[0]?.penalty_rate ?? 0.15}
-                                  onChange={(e) => updateBonusConfig(cardIdx, 'fat', 'penalty_rate', parseFloat(e.target.value) || 0)}
-                                  className="h-8 text-xs bg-white font-semibold text-rose-600"
+                                  onChange={(e) => updateBonusConfig(cardIdx, 'fat', 'penalty_rate', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="h-8 text-xs bg-white font-semibold text-rose-600 w-full"
                                 />
                               </div>
                             </div>
@@ -1047,18 +1049,33 @@ export default function RateChartDashboardPage() {
 
                           {/* SNF Bonus Config */}
                           <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-2">
-                            <span className="text-[11px] font-bold text-emerald-700 block uppercase">
-                              🥛 {t('rates.snfBonusPenalty')}
-                            </span>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-emerald-700 block uppercase">
+                                🥛 {t('rates.snfBonusPenalty')}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateBonusConfig(cardIdx, 'snf', 'base_val', 0)
+                                  updateBonusConfig(cardIdx, 'snf', 'step_size', 0)
+                                  updateBonusConfig(cardIdx, 'snf', 'bonus_rate', 0)
+                                  updateBonusConfig(cardIdx, 'snf', 'penalty_rate', 0)
+                                }}
+                                className="h-5 w-5 flex items-center justify-center rounded-md bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 transition text-[10px] font-black"
+                                title="Clear SNF parameters to 0"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2.5 text-xs">
                               <div className="space-y-0.5">
                                 <span className="text-[10px] text-slate-500 block font-semibold">{t('rates.baseVal')} (SNF)</span>
                                 <Input
                                   type="number"
                                   step="0.1"
                                   value={card.snf_bonus[0]?.base_val ?? 8.5}
-                                  onChange={(e) => updateBonusConfig(cardIdx, 'snf', 'base_val', parseFloat(e.target.value) || 0)}
-                                  className="h-8 text-xs bg-white"
+                                  onChange={(e) => updateBonusConfig(cardIdx, 'snf', 'base_val', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="h-8 text-xs bg-white w-full"
                                 />
                               </div>
                               <div className="space-y-0.5">
@@ -1067,8 +1084,8 @@ export default function RateChartDashboardPage() {
                                   type="number"
                                   step="0.05"
                                   value={card.snf_bonus[0]?.step_size ?? 0.1}
-                                  onChange={(e) => updateBonusConfig(cardIdx, 'snf', 'step_size', parseFloat(e.target.value) || 0)}
-                                  className="h-8 text-xs bg-white"
+                                  onChange={(e) => updateBonusConfig(cardIdx, 'snf', 'step_size', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="h-8 text-xs bg-white w-full"
                                 />
                               </div>
                               <div className="space-y-0.5">
@@ -1077,8 +1094,8 @@ export default function RateChartDashboardPage() {
                                   type="number"
                                   step="0.05"
                                   value={card.snf_bonus[0]?.bonus_rate ?? 0.12}
-                                  onChange={(e) => updateBonusConfig(cardIdx, 'snf', 'bonus_rate', parseFloat(e.target.value) || 0)}
-                                  className="h-8 text-xs bg-white font-semibold text-emerald-600"
+                                  onChange={(e) => updateBonusConfig(cardIdx, 'snf', 'bonus_rate', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="h-8 text-xs bg-white font-semibold text-emerald-600 w-full"
                                 />
                               </div>
                               <div className="space-y-0.5">
@@ -1087,8 +1104,8 @@ export default function RateChartDashboardPage() {
                                   type="number"
                                   step="0.05"
                                   value={card.snf_bonus[0]?.penalty_rate ?? 0.20}
-                                  onChange={(e) => updateBonusConfig(cardIdx, 'snf', 'penalty_rate', parseFloat(e.target.value) || 0)}
-                                  className="h-8 text-xs bg-white font-semibold text-rose-600"
+                                  onChange={(e) => updateBonusConfig(cardIdx, 'snf', 'penalty_rate', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="h-8 text-xs bg-white font-semibold text-rose-600 w-full"
                                 />
                               </div>
                             </div>
@@ -1143,13 +1160,12 @@ export default function RateChartDashboardPage() {
                           {matrixData.matrix[fatIdx].map((rate, snfIdx) => (
                             <td
                               key={snfIdx}
-                              className={`px-1.5 py-1.5 border-r font-bold ${
-                                rate > 0
-                                  ? milkType === 'cow'
-                                    ? 'text-blue-700 bg-blue-50/10'
-                                    : 'text-emerald-700 bg-emerald-50/10'
-                                  : 'text-slate-300'
-                              }`}
+                              className={`px-1.5 py-1.5 border-r font-bold ${rate > 0
+                                ? milkType === 'cow'
+                                  ? 'text-blue-700 bg-blue-50/10'
+                                  : 'text-emerald-700 bg-emerald-50/10'
+                                : 'text-slate-300'
+                                }`}
                             >
                               {rate > 0 ? rate.toFixed(2) : '-'}
                             </td>
@@ -1222,11 +1238,10 @@ export default function RateChartDashboardPage() {
                     setImportError('')
                   }
                 }}
-                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer ${
-                  isDragging
-                    ? 'border-blue-500 bg-blue-50/50 scale-[1.02]'
-                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                }`}
+                className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer ${isDragging
+                  ? 'border-blue-500 bg-blue-50/50 scale-[1.02]'
+                  : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
+                  }`}
                 onClick={() => document.getElementById('file-upload-input')?.click()}
               >
                 <input
@@ -1242,11 +1257,11 @@ export default function RateChartDashboardPage() {
                     }
                   }}
                 />
-                
+
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 mb-4">
                   <span className="text-3xl">📥</span>
                 </div>
-                
+
                 <p className="text-sm font-bold text-slate-800 text-center">
                   {locale === 'hi' ? 'एक्सेल (.xlsx) या JSON फ़ाइल खींचें और छोड़ें' : 'Drag & Drop Excel (.xlsx) or JSON file'}
                 </p>
@@ -1312,8 +1327,8 @@ export default function RateChartDashboardPage() {
                   disabled={!selectedFile || importing}
                   className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 shadow-lg font-bold disabled:opacity-50"
                 >
-                  {importing 
-                    ? (locale === 'hi' ? 'आयात हो रहा है...' : 'Importing...') 
+                  {importing
+                    ? (locale === 'hi' ? 'आयात हो रहा है...' : 'Importing...')
                     : (locale === 'hi' ? 'फ़ाइल आयात करें' : 'Import File')}
                 </Button>
               </div>
@@ -1365,9 +1380,8 @@ export default function RateChartDashboardPage() {
       {/* Floating Dynamic Toasts alerts system */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-white/20 bg-slate-900/95 px-5 py-4 text-white shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300">
-          <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-            toast.type === 'success' ? 'bg-emerald-500 text-slate-900' : 'bg-rose-500 text-white'
-          }`}>
+          <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${toast.type === 'success' ? 'bg-emerald-500 text-slate-900' : 'bg-rose-500 text-white'
+            }`}>
             {toast.type === 'success' ? '✓' : '⚠️'}
           </div>
           <span className="text-sm font-semibold">{toast.message}</span>

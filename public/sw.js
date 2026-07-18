@@ -2,6 +2,7 @@ const CACHE_NAME = 'sharma-dairy-cache-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/login',
+  '/home',
   '/logo.png',
   '/icon.png',
   '/apple-icon.png',
@@ -88,7 +89,7 @@ self.addEventListener('fetch', (event) => {
               if (cachedResponse) return cachedResponse;
               // If page navigation fails entirely, fallback to cached dashboard or root page
               if (isNavigation) {
-                return caches.match('/dashboard').then((dash) => {
+                return caches.match('/home').then((dash) => {
                   return dash || caches.match('/');
                 });
               }

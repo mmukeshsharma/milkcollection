@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getCustomers } from '@/lib/customers-local'
 import { getAllPurchases } from '@/lib/purchases-local'
 import { getAllPayments } from '@/lib/payments-local'
 import { ReportsViewer } from '@/components/reports/reports-viewer'
@@ -8,11 +9,13 @@ import { useLanguage } from '@/context/LanguageContext'
 
 export default function ReportsPage() {
   const { t } = useLanguage()
+  const [customers, setCustomers] = useState<any[]>([])
   const [purchases, setPurchases] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
 
   useEffect(() => {
-    Promise.all([getAllPurchases(), getAllPayments()]).then(([p, pay]) => {
+    Promise.all([getCustomers(), getAllPurchases(), getAllPayments()]).then(([c, p, pay]) => {
+      setCustomers(c.customers || [])
       setPurchases(p.purchases || [])
       setPayments(pay.payments || [])
     })
@@ -25,7 +28,7 @@ export default function ReportsPage() {
         <p className="text-sm text-slate-600">{t('reports.tagline')}</p>
       </div>
 
-      <ReportsViewer purchases={purchases} payments={payments} />
+      <ReportsViewer purchases={purchases} payments={payments} customers={customers} />
     </div>
   )
 }

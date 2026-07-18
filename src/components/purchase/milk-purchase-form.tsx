@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getPrinterSettings, generatePurchaseHtml, printReceipt } from '@/lib/printer-service'
+import { CustomerSearchSelector } from '@/components/customers/CustomerSearchSelector'
 
 const purchaseSchema = z.object({
   customer_id: z.string().min(1, 'Please select a valid customer'),
@@ -28,7 +29,7 @@ type PurchaseCustomer = { id: string; customer_code: string; name: string }
 
 import { useLanguage } from '@/context/LanguageContext'
 
-export function MilkPurchaseForm({ customers }: { customers: PurchaseCustomer[] }) {
+export function MilkPurchaseForm({ customers, onAdded }: { customers: any[]; onAdded?: () => void }) {
   const { t, locale } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -57,6 +58,10 @@ export function MilkPurchaseForm({ customers }: { customers: PurchaseCustomer[] 
       total_amount: 0,
     },
   })
+
+  useEffect(() => {
+    register('customer_id')
+  }, [register])
 
   const watchQty = watch('quantity_liters')
   const watchFat = watch('fat_percentage')
@@ -131,6 +136,7 @@ export function MilkPurchaseForm({ customers }: { customers: PurchaseCustomer[] 
 
       setLastSaved(purchaseWithCustomer)
       setSuccessMsg(locale === 'hi' ? 'प्रविष्टि सफलतापूर्वक सहेजी गई!' : 'Entry saved successfully!')
+      onAdded?.()
       
       // Print handling
       const settings = getPrinterSettings()
@@ -221,13 +227,12 @@ export function MilkPurchaseForm({ customers }: { customers: PurchaseCustomer[] 
 
         <div className="space-y-2">
           <Label htmlFor="customer_id">{t('purchase.form.selectCustomer')}</Label>
-          <select id="customer_id" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" {...register('customer_id')}>
-            <option value="">-- {t('purchase.form.selectCustomer')} --</option>
-            {customers?.map((c) => (
-              <option key={c.id} value={c.id}>{c.customer_code} - {c.name}</option>
-            ))}
-          </select>
-          {errors.customer_id && <p className="text-xs text-red-500">{errors.customer_id.message}</p>}
+          <CustomerSearchSelector
+            customers={customers}
+            selectedCustomerId={watch('customer_id')}
+            onChange={(val) => setValue('customer_id', val || '', { shouldValidate: true })}
+            error={errors.customer_id?.message}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

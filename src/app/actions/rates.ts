@@ -91,7 +91,7 @@ export async function addRate(rateData: Omit<MilkRateMatrix, 'id' | 'created_at'
 
     const data = await MilkRateMatrix.create(rateData)
 
-    revalidatePath('/dashboard/milk-rates')
+    revalidatePath('/milk-rates')
     return { success: true, rate: JSON.parse(JSON.stringify(data)) }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to add rate'
@@ -129,7 +129,7 @@ export async function updateRate(id: string, updates: Partial<MilkRateMatrix>) {
     const data = await MilkRateMatrix.findByIdAndUpdate(id, updates, { new: true })
     if (!data) return { error: 'Rate entry not found' }
 
-    revalidatePath('/dashboard/milk-rates')
+    revalidatePath('/milk-rates')
     return { success: true, rate: JSON.parse(JSON.stringify(data)) }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to update rate'
@@ -148,7 +148,7 @@ export async function deleteRate(id: string) {
     await connectToDatabase()
     await MilkRateMatrix.findByIdAndDelete(id)
 
-    revalidatePath('/dashboard/milk-rates')
+    revalidatePath('/milk-rates')
     return { success: true }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to delete rate'
@@ -213,7 +213,7 @@ export async function importRates(ratesList: Omit<MilkRateMatrix, 'id' | 'create
 
     const data = await MilkRateMatrix.insertMany(ratesList)
 
-    revalidatePath('/dashboard/milk-rates')
+    revalidatePath('/milk-rates')
     return { success: true, count: data.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to import rates'

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 export function proxy(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
   const isProtectedRoute =
-    request.nextUrl.pathname.startsWith('/dashboard') ||
+    request.nextUrl.pathname.startsWith('/home') ||
     request.nextUrl.pathname.startsWith('/members') ||
     request.nextUrl.pathname.startsWith('/purchase') ||
     request.nextUrl.pathname.startsWith('/sale') ||
@@ -40,7 +40,7 @@ export function proxy(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard'
+    redirectUrl.pathname = '/home'
     return NextResponse.redirect(redirectUrl)
   }
 

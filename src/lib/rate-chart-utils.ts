@@ -64,10 +64,11 @@ export function generateRateMatrixPreview(chart: RateChartInput): {
 
   // Default coordinate ranges for matrix preview rendering
   const isCow = chart.milk_type === 'cow'
-  const startFat = isCow ? 2.0 : 5.0
-  const endFat = isCow ? 5.5 : 10.0
-  const startSnf = isCow ? 7.5 : 8.0
-  const endSnf = isCow ? 9.5 : 11.5
+  const isMixed = chart.milk_type === 'mixed'
+  const startFat = isCow ? 2.0 : isMixed ? 3.0 : 5.0
+  const endFat = isCow ? 5.5 : isMixed ? 8.0 : 10.0
+  const startSnf = isCow ? 7.5 : isMixed ? 7.5 : 8.0
+  const endSnf = isCow ? 9.5 : isMixed ? 10.5 : 11.5
 
   for (let f = startFat; f <= endFat; f = Number((f + 0.1).toFixed(1))) {
     fatHeaders.push(f)
@@ -136,15 +137,15 @@ export function generateRateMatrixPreview(chart: RateChartInput): {
 
       let val = 0
       if (calcType === 'fat_based') {
-        val = fatBaseRate
+        val = fat * fatBaseRate
       } else if (calcType === 'snf_based') {
-        val = snfBaseRate
+        val = snf * snfBaseRate
       } else if (calcType === 'fat_snf_base_rate') {
         // Correct formula: Rate = (FAT × fat_rate) + bonus
         val = fat * fatBaseRate
       } else {
-        // fat_snf: FAT rate + SNF rate
-        val = fatBaseRate + snfBaseRate
+        // fat_snf: (FAT * FAT rate) + (SNF * SNF rate)
+        val = (fat * fatBaseRate) + (snf * snfBaseRate)
       }
 
       val = val + bonusAmt + fatDev + snfDev

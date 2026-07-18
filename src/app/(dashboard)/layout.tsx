@@ -8,11 +8,13 @@ import { LanguageSelector } from '@/components/ui/language-selector'
 import { useLanguage } from '@/context/LanguageContext'
 import { usePathname, useRouter } from 'next/navigation'
 import { getSessionUser } from '@/app/actions/auth'
+import { Button } from '@/components/ui/button'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t, locale } = useLanguage()
   const pathname = usePathname()
   const router = useRouter()
+  const hi = locale === 'hi'
   const [user, setUser] = useState<{ role: string; name: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [deactivated, setDeactivated] = useState(false)
@@ -20,6 +22,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [expired, setExpired] = useState(false)
   const [isDemo, setIsDemo] = useState(false)
   const [countdown, setCountdown] = useState(5)
+  const [offlineLock, setOfflineLock] = useState(false)
+  const [clockTampered, setClockTampered] = useState(false)
 
   useEffect(() => {
     let lastCheckTime = Date.now()
@@ -29,7 +33,36 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         if (typeof window !== 'undefined' && !navigator.onLine) {
           const cached = localStorage.getItem('sharma_dairy_cached_user')
           if (cached) {
-            setUser(JSON.parse(cached))
+            const cachedUser = JSON.parse(cached)
+            setUser(cachedUser)
+
+            // Clock tampering check
+            const lastUseStr = localStorage.getItem('sharma_dairy_last_app_use_time')
+            const lastUse = lastUseStr ? parseInt(lastUseStr, 10) : Date.now()
+            const now = Date.now()
+            
+            if (now < lastUse - 600000) { // 10 minutes tolerance threshold
+              setClockTampered(true)
+              if (!isSilent) setLoading(false)
+              return
+            } else {
+              localStorage.setItem('sharma_dairy_last_app_use_time', now.toString())
+            }
+
+            // 7-day offline verification check
+            const lastVerifiedStr = localStorage.getItem('sharma_dairy_last_verified_at')
+            const lastVerified = lastVerifiedStr ? parseInt(lastVerifiedStr, 10) : Date.now()
+            if (!lastVerifiedStr) {
+              localStorage.setItem('sharma_dairy_last_verified_at', now.toString())
+            }
+
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+            if (now - lastVerified > sevenDaysMs) {
+              setOfflineLock(true)
+              if (!isSilent) setLoading(false)
+              return
+            }
+
             if (!isSilent) setLoading(false)
             return
           }
@@ -51,7 +84,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           }
           setUser(currUser)
           localStorage.setItem('sharma_dairy_cached_user', JSON.stringify(currUser))
-          lastCheckTime = Date.now()
+          const now = Date.now()
+          localStorage.setItem('sharma_dairy_last_verified_at', now.toString())
+          localStorage.setItem('sharma_dairy_last_app_use_time', now.toString())
+          setOfflineLock(false)
+          setClockTampered(false)
+          lastCheckTime = now
         } else {
           // Instantly redirect to login if session becomes invalid or account is deactivated
           if (typeof window !== 'undefined' && navigator.onLine) {
@@ -139,12 +177,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined' && navigator.onLine && user) {
       const routes = (user.role === 'super_admin' || user.role === 'admin')
-        ? ['/dashboard', '/agent-management', '/settings']
+        ? ['/home', '/agent-management', '/settings', '/staff', '/subscriptions']
         : [
-            '/dashboard',
+            '/home',
             '/members',
             '/purchase',
-            '/dashboard/milk-rates',
+            '/milk-rates',
             '/sale',
             '/payments',
             '/passbook',
@@ -166,29 +204,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [router, user])
 
-  // Dynamic Navigation Links based on User Role
   const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin'
-
-  const navLinks = isSuperAdmin
-    ? [
-      { href: '/dashboard', labelKey: 'nav.dashboard' },
-      { href: '/agent-management', labelKey: 'nav.agentManagement' },
-      { href: '/settings', labelKey: 'nav.settings' },
-    ]
-    : [
-      { href: '/dashboard', labelKey: 'nav.dashboard' },
-      { href: '/members', labelKey: 'nav.customers' },
-      { href: '/purchase', labelKey: 'nav.milkPurchase' },
-      { href: '/dashboard/milk-rates', labelKey: 'nav.milkRates' },
-      { href: '/sale', labelKey: 'nav.milkSales' },
-      { href: '/payments', labelKey: 'nav.payments' },
-      { href: '/passbook', labelKey: 'nav.passbook' },
-      { href: '/reports', labelKey: 'nav.reports' },
-      { href: '/inventory', labelKey: 'nav.inventory' },
-      { href: '/settings', labelKey: 'nav.settings' },
-    ]
-
-  const isActive = (href: string) => pathname === href
 
   if (expired) {
     const title = isDemo
@@ -262,6 +278,70 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     )
   }
 
+  if (clockTampered) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/85 backdrop-blur-md p-4">
+        <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-100 text-center space-y-5 animate-in zoom-in-95 duration-300">
+          <div className="h-16 w-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-600 border border-rose-100 text-2xl font-bold animate-bounce">
+            ⏰
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+              {locale === 'hi' ? 'समय में गड़बड़ी का पता चला' : 'Device Clock Alteration Detected'}
+            </h2>
+            <p className="text-sm text-slate-500 leading-relaxed font-semibold">
+              {locale === 'hi'
+                ? 'सिस्टम घड़ी में हेरफेर का पता चला है। कृपया अपने डिवाइस पर सही समय सेट करें और सत्यापन के लिए इंटरनेट से कनेक्ट करें।'
+                : 'System clock tampering or alteration has been detected. Please correct your device date/time settings and connect to the internet to verify subscription.'}
+            </p>
+            <div className="text-xs text-blue-600 font-black pt-3.5 border-t border-slate-100 space-y-1">
+              <p>🏢 Sharma Dairy Equipments</p>
+              <p>📞 Phone: +91 99286 53383</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => window.location.reload()}
+            className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold"
+          >
+            🔄 {locale === 'hi' ? 'पुनः प्रयास करें' : 'Retry Verification'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (offlineLock) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/85 backdrop-blur-md p-4">
+        <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-100 text-center space-y-5 animate-in zoom-in-95 duration-300">
+          <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600 border border-blue-100 text-2xl font-bold animate-bounce">
+            📡
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+              {locale === 'hi' ? 'इंटरनेट कनेक्शन आवश्यक है' : 'Internet Connection Required'}
+            </h2>
+            <p className="text-sm text-slate-500 leading-relaxed font-semibold">
+              {locale === 'hi'
+                ? 'ऑफ़लाइन सीमा समाप्त हो गई है। सुरक्षा कारणों से, आपको सप्ताह में कम से कम एक बार अपनी सक्रिय सदस्यता सत्यापित करने के लिए इंटरनेट से कनेक्ट करना होगा।'
+                : 'Offline limit reached. For security and subscription licensing checks, you must connect to the internet at least once every 7 days to verify active status.'}
+            </p>
+            <div className="text-xs text-blue-600 font-black pt-3.5 border-t border-slate-100 space-y-1">
+              <p>🏢 Sharma Dairy Equipments</p>
+              <p>📞 Phone: +91 99286 53383</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => window.location.reload()}
+            className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold"
+          >
+            🔄 {locale === 'hi' ? 'सत्यापित करें' : 'Verify Online Now'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f4f8fc]/40">
@@ -275,63 +355,53 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     )
   }
 
+  const isSubPage = pathname !== '/home' && pathname !== '/'
+
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden w-72 border-r border-white/30 bg-white/65 backdrop-blur-xl lg:block select-none h-full overflow-y-auto">
-        <div className="border-b border-white/40 p-5">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Sharma Dairy" width={44} height={44} className="rounded-xl border border-blue-100" />
-            <div>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
-                {isSuperAdmin
-                  ? (locale === 'hi' ? 'सास सुपर एडमिन' : 'SaaS Super Admin')
-                  : (locale === 'hi' ? 'डेयरी ऑपरेटर सास' : 'Dairy Operator SaaS')}
-              </p>
-              <p className="text-lg font-extrabold text-[#0084FF]">
-                {isSuperAdmin
-                  ? (locale === 'hi' ? 'सास एडमिन कंसोल' : 'SaaS Admin Console')
-                  : (locale === 'hi' ? 'शर्मा डेयरी' : 'Sharma Dairy')}
-              </p>
-            </div>
-          </div>
-        </div>
-        <nav className="space-y-1.5 p-4 text-sm font-semibold text-slate-600">
-          {navLinks.map((link) => {
-            const active = isActive(link.href)
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`block rounded-xl px-4 py-2.5 transition ${active
-                  ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600 pl-3'
-                  : 'hover:bg-blue-50/50 hover:text-slate-800'
-                  }`}
-              >
-                {t(link.labelKey)}
-              </Link>
-            )
-          })}
-        </nav>
-      </aside>
-
-      {/* Main Container */}
+      {/* Main Container takes 100% width since Sidebar is removed */}
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        <header className="sticky top-0 z-30 border-b border-white/40 bg-white/70 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 border-b border-white/40 bg-white/70 backdrop-blur-xl shrink-0">
           <div className="flex h-16 items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-3">
-              <Image src="/logo.png" alt="Sharma Dairy" width={32} height={32} className="rounded-lg border border-blue-100 lg:hidden" />
-              <div className="flex flex-col text-left leading-tight shrink-0">
-                <span className="font-extrabold text-slate-700 text-xs sm:text-sm tracking-tight whitespace-nowrap">
-                  {locale === 'hi' ? 'शर्मा डेयरी' : 'Sharma Dairy'}
-                </span>
-                <span className="font-bold text-[9px] sm:text-xs text-[#0084FF] tracking-wider uppercase whitespace-nowrap">
-                  {locale === 'hi' ? 'इक्विपमेंट्स' : 'Equipments'}
-                </span>
-              </div>
+              {isSubPage ? (
+                <Link
+                  href="/home"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-bold text-[#1e293b] bg-white/80 border border-slate-200/60 rounded-xl shadow-xs hover:bg-slate-50 transition-all duration-200"
+                >
+                  <span className="font-mono">←</span> <span>{hi ? 'मुख्य पृष्ठ' : 'Home'}</span>
+                </Link>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Image src="/logo.png" alt="Sharma Dairy" width={32} height={32} className="rounded-lg border border-blue-100" />
+                  <div className="flex flex-col text-left leading-tight shrink-0">
+                    <span className="font-extrabold text-slate-700 text-xs sm:text-sm tracking-tight whitespace-nowrap">
+                      {locale === 'hi' ? 'शर्मा डेयरी' : 'Sharma Dairy'}
+                    </span>
+                    <span className="font-bold text-[9px] sm:text-xs text-[#0084FF] tracking-wider uppercase whitespace-nowrap">
+                      {locale === 'hi' ? 'इक्विपमेंट्स' : 'Equipments'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Desktop Header Actions */}
+            {/* Middle Logo (Centered on Desktop) only for sub-pages */}
+            {isSubPage && (
+              <div className="hidden md:flex items-center gap-3">
+                <Image src="/logo.png" alt="Sharma Dairy" width={28} height={28} className="rounded-lg border border-blue-100" />
+                <div className="flex flex-col text-left leading-tight shrink-0">
+                  <span className="font-extrabold text-slate-700 text-[11px] tracking-tight whitespace-nowrap">
+                    {locale === 'hi' ? 'शर्मा डेयरी' : 'Sharma Dairy'}
+                  </span>
+                  <span className="font-bold text-[8px] text-[#0084FF] tracking-wider uppercase whitespace-nowrap">
+                    {locale === 'hi' ? 'इक्विपमेंट्स' : 'Equipments'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Desktop/Mobile Header Actions */}
             <div className="flex items-center space-x-2 sm:space-x-4">
               {user && (
                 <div className="flex flex-col text-right leading-none shrink-0 min-w-0 pr-2 sm:pr-4 border-r border-slate-200">
@@ -349,29 +419,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <LogoutButton />
             </div>
           </div>
-
-          {/* Mobile Sidebar - Horizontal Dropdown Menu */}
-          <div className="lg:hidden border-t border-white/40 px-3 py-2.5 bg-white/40">
-            <nav className="flex gap-2 items-center overflow-x-auto whitespace-nowrap text-xs pb-1 scrollbar-none">
-              {navLinks.map((link) => {
-                const active = isActive(link.href)
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`rounded-lg px-3 py-1.5 font-semibold transition ${active ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                      }`}
-                  >
-                    {t(link.labelKey)}
-                  </Link>
-                )
-              })}
-
-            </nav>
-          </div>
         </header>
 
-        {/* Dynamic page content */}
+        {/* Dynamic page content (takes full width) */}
         <div className="flex-1 overflow-auto p-4 md:p-6 bg-[#f4f8fc]/40">
           {children}
         </div>

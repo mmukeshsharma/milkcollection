@@ -33,11 +33,28 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                    console.error('ServiceWorker registration failed:', err);
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                  navigator.serviceWorker.getRegistrations().then(function(regs) {
+                    for (let reg of regs) {
+                      reg.unregister();
+                      console.log('Unregistered active development service worker');
+                    }
                   });
-                });
+                  if ('caches' in window) {
+                    caches.keys().then(function(keys) {
+                      for (let key of keys) {
+                        caches.delete(key);
+                      }
+                      console.log('Cleared development cache storage');
+                    });
+                  }
+                } else {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                      console.error('ServiceWorker registration failed:', err);
+                    });
+                  });
+                }
               }
             `
           }}

@@ -193,7 +193,7 @@ export async function login(formData: FormData) {
     })
 
     revalidatePath('/', 'layout')
-    redirect('/dashboard')
+    redirect('/home')
   } catch (error) {
     if (isRedirectError(error)) throw error
     const message = error instanceof Error ? error.message : 'Authentication failed'

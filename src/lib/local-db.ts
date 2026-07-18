@@ -178,7 +178,7 @@ export function calculateRateFromChart(
 ): { rate: number; bonus: number; penalty: number; chartId: string; chartName: string; error?: string } {
   const card = chart.cards?.[0]
   if (!card) {
-    return { rate: 0, bonus: 0, penalty: 0, chartId: chart.id, chartName: chart.chart_name, error: 'No card configured' }
+    return { rate: 0, bonus: 0, penalty: 0, chartId: chart.id || chart._id, chartName: chart.chart_name, error: 'No card configured' }
   }
 
   const calcType  = chart.calculation_type
@@ -186,37 +186,100 @@ export function calculateRateFromChart(
 
   let fatBaseRate = 0
   let snfBaseRate = 0
+  let hasFatMatch = false
+  let hasSnfMatch = false
 
   if (calcType === 'fat_based' || calcType === 'fat_snf' || calcType === 'fat_snf_base_rate') {
     const match = card.fat_steps?.find((s: any) => fat >= s.min_val && fat <= s.max_val)
-    if (match) fatBaseRate = match.rate
+    if (match) {
+      fatBaseRate = match.rate
+      hasFatMatch = true
+    }
+  } else {
+    hasFatMatch = true
   }
-  if (calcType === 'snf_based' || calcType === 'fat_snf') {
+
+  if (calcType === 'snf_based' || calcType === 'fat_snf' || calcType === 'fat_snf_base_rate') {
     const match = card.snf_steps?.find((s: any) => snf >= s.min_val && snf <= s.max_val)
-    if (match) snfBaseRate = match.rate
+    if (match) {
+      snfBaseRate = match.rate
+      hasSnfMatch = true
+    }
+  } else {
+    hasSnfMatch = true
+  }
+
+  if (!hasFatMatch) {
+    return { rate: 0, bonus: 0, penalty: 0, chartId: chart.id || chart._id, chartName: chart.chart_name, error: `FAT percentage (${fat.toFixed(1)}%) is out of configured rate chart steps.` }
+  }
+  if (!hasSnfMatch) {
+    return { rate: 0, bonus: 0, penalty: 0, chartId: chart.id || chart._id, chartName: chart.chart_name, error: `SNF percentage (${snf.toFixed(1)}%) is out of configured rate chart steps.` }
+  }
+
+  let fatDev = 0
+  let snfDev = 0
+
+  if (calcType === 'fat_snf_base_rate') {
+    const fatBonusConfig = card.fat_bonus?.[0]
+    if (fatBonusConfig) {
+      const baseFat = fatBonusConfig.base_val
+      const stepSize = fatBonusConfig.step_size || 0.1
+      const delta = Number((fat - baseFat).toFixed(2))
+      if (delta > 0) {
+        const stepsCount = Math.floor(Number((delta / stepSize).toFixed(4)))
+        fatDev = stepsCount * fatBonusConfig.bonus_rate
+      } else if (delta < 0) {
+        const stepsCount = Math.floor(Number((Math.abs(delta) / stepSize).toFixed(4)))
+        fatDev = -(stepsCount * fatBonusConfig.penalty_rate)
+      }
+    }
+
+    const snfBonusConfig = card.snf_bonus?.[0]
+    if (snfBonusConfig) {
+      const baseSnf = snfBonusConfig.base_val
+      const stepSize = snfBonusConfig.step_size || 0.1
+      const delta = Number((snf - baseSnf).toFixed(2))
+      if (delta > 0) {
+        const stepsCount = Math.floor(Number((delta / stepSize).toFixed(4)))
+        snfDev = stepsCount * snfBonusConfig.bonus_rate
+      } else if (delta < 0) {
+        const stepsCount = Math.floor(Number((Math.abs(delta) / stepSize).toFixed(4)))
+        snfDev = -(stepsCount * snfBonusConfig.penalty_rate)
+      }
+    }
   }
 
   let rate = 0
   if (calcType === 'fat_based') {
-    rate = fatBaseRate
+    rate = fat * fatBaseRate
   } else if (calcType === 'snf_based') {
-    rate = snfBaseRate
+    rate = snf * snfBaseRate
   } else if (calcType === 'fat_snf_base_rate') {
-    // ✅ Correct formula: Rate = (FAT × fat_rate) + bonus
+    // ✅ Correct formula: Rate = (FAT × fat_rate)
     rate = fat * fatBaseRate
   } else {
-    // fat_snf
-    rate = fatBaseRate + snfBaseRate
+    // fat_snf: (FAT * FAT rate) + (SNF * SNF rate)
+    rate = (fat * fatBaseRate) + (snf * snfBaseRate)
   }
 
-  rate = rate + bonusAmt
+  rate = rate + bonusAmt + fatDev + snfDev
   rate = Math.max(0, Number(rate.toFixed(2)))
+
+  let bonus = bonusAmt
+  let penalty = 0
+  if (calcType === 'fat_snf_base_rate') {
+    if (fatDev > 0) bonus += fatDev
+    else if (fatDev < 0) penalty += Math.abs(fatDev)
+
+    if (snfDev > 0) bonus += snfDev
+    else if (snfDev < 0) penalty += Math.abs(snfDev)
+  }
 
   return {
     rate,
-    bonus: bonusAmt,
-    penalty: 0,
-    chartId: chart.id,
+    bonus,
+    penalty,
+    chartId: chart.id || chart._id,
     chartName: chart.chart_name,
   }
 }

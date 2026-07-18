@@ -620,7 +620,8 @@ export default function SettingsPage() {
                 <div
                   className="bg-white border border-slate-300 shadow-lg px-0 py-3 overflow-hidden transition-all duration-300"
                   style={{
-                    width: settings.paperWidth === '58mm' ? '58mm' : '80mm',
+                    width: 'fit-content',
+                    minWidth: settings.paperWidth === '58mm' ? '32ch' : '48ch',
                     height: 'auto',
                     boxSizing: 'content-box',
                   }}
@@ -630,6 +631,7 @@ export default function SettingsPage() {
                       data={MOCK_PURCHASE}
                       settings={settings}
                       locale={previewLang || 'en'}
+                      mode="preview"
                     />
                   )}
                   {previewType === 'sale' && (
@@ -637,6 +639,7 @@ export default function SettingsPage() {
                       data={MOCK_SALE}
                       settings={settings}
                       locale={previewLang || 'en'}
+                      mode="preview"
                     />
                   )}
                   {previewType === 'store_sale' && (
@@ -644,6 +647,7 @@ export default function SettingsPage() {
                       data={MOCK_STORE_SALE}
                       settings={settings}
                       locale={previewLang || 'en'}
+                      mode="preview"
                     />
                   )}
                   {previewType === 'payment' && (
@@ -651,6 +655,7 @@ export default function SettingsPage() {
                       data={MOCK_PAYMENT}
                       settings={settings}
                       locale={previewLang || 'en'}
+                      mode="preview"
                     />
                   )}
                   {previewType === 'passbook' && (
@@ -658,6 +663,7 @@ export default function SettingsPage() {
                       data={{ ledger: MOCK_LEDGER, customer: MOCK_CUSTOMER }}
                       settings={settings}
                       locale={previewLang || 'en'}
+                      mode="preview"
                     />
                   )}
                 </div>

@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/context/LanguageContext'
+import { CustomerSearchSelector } from '@/components/customers/CustomerSearchSelector'
 
-export function ReportsViewer({ purchases, payments }: { purchases: any[]; payments: any[] }) {
+export function ReportsViewer({ purchases, payments, customers = [] }: { purchases: any[]; payments: any[]; customers?: any[] }) {
   const { locale } = useLanguage()
   const [reportType, setReportType] = useState<'purchase' | 'payment'>('purchase')
   
@@ -16,17 +17,43 @@ export function ReportsViewer({ purchases, payments }: { purchases: any[]; payme
   
   const [startDate, setStartDate] = useState(past30)
   const [endDate, setEndDate] = useState(today)
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>(undefined)
+  const [presetActive, setPresetActive] = useState<'today' | 'yesterday' | 'month' | 'past30' | 'custom'>('past30')
+
+  const handlePreset = (preset: 'today' | 'yesterday' | 'month' | 'past30') => {
+    setPresetActive(preset)
+    const todayStr = new Date().toISOString().slice(0, 10)
+    if (preset === 'today') {
+      setStartDate(todayStr)
+      setEndDate(todayStr)
+    } else if (preset === 'yesterday') {
+      const yesterday = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10)
+      setStartDate(yesterday)
+      setEndDate(yesterday)
+    } else if (preset === 'month') {
+      const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
+      setStartDate(firstDay)
+      setEndDate(todayStr)
+    } else {
+      setStartDate(past30)
+      setEndDate(todayStr)
+    }
+  }
 
   // Filter purchases
   const filteredPurchases = purchases.filter((p) => {
     const pDate = p.purchase_date || p.created_at?.slice(0, 10)
-    return pDate >= startDate && pDate <= endDate
+    const dateMatch = pDate >= startDate && pDate <= endDate
+    const customerMatch = !selectedCustomerId || p.customer_id === selectedCustomerId || p.customers?.id === selectedCustomerId
+    return dateMatch && customerMatch
   })
 
   // Filter payments
   const filteredPayments = payments.filter((pay) => {
     const payDate = pay.payment_date || pay.created_at?.slice(0, 10)
-    return payDate >= startDate && payDate <= endDate
+    const dateMatch = payDate >= startDate && payDate <= endDate
+    const customerMatch = !selectedCustomerId || pay.customer_id === selectedCustomerId || pay.customers?.id === selectedCustomerId
+    return dateMatch && customerMatch
   })
 
   // Calculate purchase stats
@@ -68,33 +95,106 @@ export function ReportsViewer({ purchases, payments }: { purchases: any[]; payme
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-white/40 bg-white/75 p-5 shadow-xl backdrop-blur-xl space-y-4">
+      <div className="rounded-2xl border border-white/40 bg-white/75 p-5 shadow-xl backdrop-blur-xl space-y-4 relative z-20">
         <div className="flex gap-2 border-b pb-4">
           <Button 
             variant={reportType === 'purchase' ? 'default' : 'outline'}
             onClick={() => setReportType('purchase')}
-            className={reportType === 'purchase' ? 'bg-blue-700 text-white' : ''}
+            className={reportType === 'purchase' ? 'bg-blue-700 text-white font-extrabold' : 'font-extrabold'}
           >
             {locale === 'hi' ? 'दूध संग्रह रिपोर्ट' : 'Milk Collection Report'}
           </Button>
           <Button 
             variant={reportType === 'payment' ? 'default' : 'outline'}
             onClick={() => setReportType('payment')}
-            className={reportType === 'payment' ? 'bg-emerald-700 text-white' : ''}
+            className={reportType === 'payment' ? 'bg-emerald-700 text-white font-extrabold' : 'font-extrabold'}
           >
             {locale === 'hi' ? 'भुगतान एवं अग्रिम रिपोर्ट' : 'Payouts & Advances Report'}
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 max-w-lg">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 max-w-2xl">
           <div className="space-y-2">
             <Label htmlFor="start_date">{locale === 'hi' ? 'प्रारंभ तिथि' : 'Start Date'}</Label>
-            <Input id="start_date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input 
+              id="start_date" 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => {
+                setStartDate(e.target.value)
+                setPresetActive('custom')
+              }} 
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="end_date">{locale === 'hi' ? 'अंतिम तिथि' : 'End Date'}</Label>
-            <Input id="end_date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Input 
+              id="end_date" 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => {
+                setEndDate(e.target.value)
+                setPresetActive('custom')
+              }} 
+            />
           </div>
+          <div className="space-y-2">
+            <Label>{locale === 'hi' ? 'किसान चुनें (वैकल्पिक)' : 'Filter by Customer (Optional)'}</Label>
+            <CustomerSearchSelector
+              customers={customers}
+              selectedCustomerId={selectedCustomerId}
+              onChange={setSelectedCustomerId}
+            />
+          </div>
+        </div>
+
+        {/* Date presets selection list */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100/60 pt-3">
+          <span className="text-[11px] font-bold text-slate-400 mr-1.5">{locale === 'hi' ? 'त्वरित फ़िल्टर:' : 'Quick Presets:'}</span>
+          <button
+            type="button"
+            onClick={() => handlePreset('today')}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
+              presetActive === 'today'
+                ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+            }`}
+          >
+            {locale === 'hi' ? 'आज (Today)' : 'Today (Single Day)'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePreset('yesterday')}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
+              presetActive === 'yesterday'
+                ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+            }`}
+          >
+            {locale === 'hi' ? 'बीता कल' : 'Yesterday'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePreset('month')}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
+              presetActive === 'month'
+                ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+            }`}
+          >
+            {locale === 'hi' ? 'इस महीने' : 'This Month'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePreset('past30')}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
+              presetActive === 'past30'
+                ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+            }`}
+          >
+            {locale === 'hi' ? 'पिछले 30 दिन' : 'Past 30 Days'}
+          </button>
         </div>
       </div>
 

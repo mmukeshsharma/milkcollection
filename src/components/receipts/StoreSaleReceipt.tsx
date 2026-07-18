@@ -5,25 +5,29 @@ interface Props {
   data: any
   settings: PrinterSettings
   locale?: 'en' | 'hi'
+  mode?: 'preview' | 'print'
 }
 
-export const StoreSaleReceipt: React.FC<Props> = ({ data, settings, locale = 'en' }) => {
+export const StoreSaleReceipt: React.FC<Props> = ({ data, settings, locale = 'en', mode = 'print' }) => {
   const text = buildStoreSaleText(data, settings, locale)
-  const w = settings.paperWidth === '58mm' ? '58mm' : '80mm'
+  const is58mm = settings.paperWidth === '58mm'
+  const charWidth = is58mm ? 32 : 48
   const feedPadding = `${settings.paperFeedAfterPrint ?? 5}mm`
-  
+
   return (
     <pre
       style={{
         fontFamily: "'Courier New', Courier, monospace",
-        fontSize: '10px',
-        lineHeight: 1.2,
-        color: '#000',
+        fontSize: mode === 'preview' ? '13px' : '10px',
+        lineHeight: 1.3,
+        color: '#000000',
+        backgroundColor: '#FFFFFF',
         margin: '0 auto',
-        padding: `0 0 ${feedPadding} 0`,
-        width: w,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
+        padding: mode === 'preview' ? '12px 16px' : `0 0 ${feedPadding} 0`,
+        width: `${charWidth}ch`,
+        whiteSpace: 'pre',
+        wordBreak: 'break-all',
+        boxSizing: 'content-box',
       }}
     >
       {text}

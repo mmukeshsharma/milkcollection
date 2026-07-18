@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -8,15 +8,27 @@ import { addSaleEntry } from '@/lib/sales-local'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { CustomerSearchSelector } from '@/components/customers/CustomerSearchSelector'
 
 const saleSchema = z.object({
   buyer_type: z.enum(['external', 'farmer']),
   customer_id: z.string().optional(),
-  buyer_name: z.string().min(1, 'Buyer name is required'),
+  buyer_name: z.string().optional(),
   sale_date: z.string().min(1, 'Date is required'),
   milk_type: z.enum(['cow', 'buffalo', 'mixed']),
   quantity_liters: z.number().positive('Quantity must be greater than 0'),
   rate_per_liter: z.number().positive('Rate must be greater than 0'),
+}).refine((data) => {
+  if (data.buyer_type === 'farmer' && !data.customer_id) {
+    return false
+  }
+  if (data.buyer_type === 'external' && !data.buyer_name?.trim()) {
+    return false
+  }
+  return true
+}, {
+  message: 'Buyer selection/name is required',
+  path: ['buyer_name']
 })
 
 type SaleFormValues = z.infer<typeof saleSchema>
@@ -38,14 +50,18 @@ export function MilkSaleForm({ customers, onAdded }: { customers: any[]; onAdded
   } = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-      buyer_type: 'external',
-      buyer_name: 'Local Dairy Corp',
+      buyer_type: 'farmer',
+      buyer_name: '',
       sale_date: new Date().toISOString().slice(0, 10),
       milk_type: 'mixed',
-      quantity_liters: 50,
+      quantity_liters: 0,
       rate_per_liter: 55,
     },
   })
+
+  useEffect(() => {
+    register('customer_id')
+  }, [register])
 
   const buyerType = watch('buyer_type')
   const qty = watch('quantity_liters') || 0
@@ -57,8 +73,8 @@ export function MilkSaleForm({ customers, onAdded }: { customers: any[]; onAdded
     setMessage(null)
 
     const payload = {
-      buyer_name: data.buyer_type === 'farmer' 
-        ? customers.find(c => c.id === data.customer_id)?.name || 'Farmer' 
+      buyer_name: data.buyer_type === 'farmer'
+        ? customers.find(c => c.id === data.customer_id)?.name || 'Farmer'
         : data.buyer_name,
       customer_id: data.buyer_type === 'farmer' ? data.customer_id : undefined,
       sale_date: data.sale_date,
@@ -74,12 +90,13 @@ export function MilkSaleForm({ customers, onAdded }: { customers: any[]; onAdded
       setMessage({ type: 'error', text: response.error })
     } else {
       setMessage({ type: 'success', text: 'Milk sale recorded successfully!' })
+      onAdded?.()
       reset({
-        buyer_type: 'external',
-        buyer_name: 'Local Dairy Corp',
+        buyer_type: 'farmer',
+        buyer_name: '',
         sale_date: new Date().toISOString().slice(0, 10),
         milk_type: 'mixed',
-        quantity_liters: 50,
+        quantity_liters: 0,
         rate_per_liter: 55,
       })
     }
@@ -89,13 +106,12 @@ export function MilkSaleForm({ customers, onAdded }: { customers: any[]; onAdded
   return (
     <div className="rounded-2xl border border-white/40 bg-white/75 p-5 shadow-xl backdrop-blur-xl animate-[fadeIn_0.3s_ease-out]">
       <h3 className="mb-4 text-lg font-bold text-slate-800">{t('sales.formTitle')}</h3>
-      
+
       {message && (
-        <div className={`mb-4 rounded-xl p-3 text-sm font-medium ${
-          message.type === 'success' 
-            ? 'bg-green-50 text-green-700 border border-green-200' 
-            : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
+        <div className={`mb-4 rounded-xl p-3 text-sm font-medium ${message.type === 'success'
+          ? 'bg-green-50 text-green-700 border border-green-200'
+          : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
           {message.text}
         </div>
       )}
@@ -117,18 +133,12 @@ export function MilkSaleForm({ customers, onAdded }: { customers: any[]; onAdded
           {buyerType === 'farmer' ? (
             <div className="space-y-2">
               <Label htmlFor="customer_id">{t('purchase.form.selectCustomer')}</Label>
-              <select
-                id="customer_id"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                {...register('customer_id')}
-              >
-                <option value="">-- {t('purchase.form.selectCustomer')} --</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.customer_code} - {c.name}
-                  </option>
-                ))}
-              </select>
+              <CustomerSearchSelector
+                customers={customers}
+                selectedCustomerId={watch('customer_id')}
+                onChange={(val) => setValue('customer_id', val || '', { shouldValidate: true })}
+                error={errors.customer_id?.message}
+              />
             </div>
           ) : (
             <div className="space-y-2">
@@ -160,11 +170,11 @@ export function MilkSaleForm({ customers, onAdded }: { customers: any[]; onAdded
 
           <div className="space-y-2">
             <Label htmlFor="quantity_liters">{t('sales.form.qty')}</Label>
-            <Input 
-              id="quantity_liters" 
-              type="number" 
+            <Input
+              id="quantity_liters"
+              type="number"
               step="any"
-              placeholder="50" 
+              placeholder="0"
               onChange={(e) => setValue('quantity_liters', Number(e.target.value))}
             />
             {errors.quantity_liters && <p className="text-xs text-red-500">{errors.quantity_liters.message}</p>}
@@ -172,11 +182,11 @@ export function MilkSaleForm({ customers, onAdded }: { customers: any[]; onAdded
 
           <div className="space-y-2">
             <Label htmlFor="rate_per_liter">{t('sales.form.rate')}</Label>
-            <Input 
-              id="rate_per_liter" 
-              type="number" 
+            <Input
+              id="rate_per_liter"
+              type="number"
               step="any"
-              placeholder="55" 
+              placeholder="55"
               onChange={(e) => setValue('rate_per_liter', Number(e.target.value))}
             />
             {errors.rate_per_liter && <p className="text-xs text-red-500">{errors.rate_per_liter.message}</p>}

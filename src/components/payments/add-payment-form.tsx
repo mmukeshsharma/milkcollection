@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/context/LanguageContext'
 import { getPrinterSettings, generatePaymentHtml, printReceipt } from '@/lib/printer-service'
+import { CustomerSearchSelector } from '@/components/customers/CustomerSearchSelector'
 
 const paymentSchema = z.object({
   customer_id: z.string().min(1, 'Please select a customer'),
@@ -34,6 +35,7 @@ export function AddPaymentForm({ customers, onAdded }: { customers: any[]; onAdd
     handleSubmit,
     setValue,
     reset,
+    watch,
     formState: { errors },
   } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
@@ -45,6 +47,10 @@ export function AddPaymentForm({ customers, onAdded }: { customers: any[]; onAdd
       payment_method: 'cash',
     },
   })
+
+  useEffect(() => {
+    register('customer_id')
+  }, [register])
 
   async function handleFormSubmit(data: PaymentFormValues, shouldPrint: boolean = false) {
     setIsLoading(true)
@@ -81,6 +87,7 @@ export function AddPaymentForm({ customers, onAdded }: { customers: any[]; onAdd
         printReceipt(html)
       }
 
+      onAdded?.()
       reset({
         customer_id: '',
         payment_date: new Date().toISOString().slice(0, 10),
@@ -162,19 +169,12 @@ export function AddPaymentForm({ customers, onAdded }: { customers: any[]; onAdd
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="customer_id">{t('payments.form.selectCustomer')}</Label>
-            <select
-              id="customer_id"
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-              {...register('customer_id')}
-            >
-              <option value="">{locale === 'hi' ? '-- किसान चुनें --' : '-- Choose Customer --'}</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.customer_code} - {c.name}
-                </option>
-              ))}
-            </select>
-            {errors.customer_id && <p className="text-xs text-red-500">{errors.customer_id.message}</p>}
+            <CustomerSearchSelector
+              customers={customers}
+              selectedCustomerId={watch('customer_id')}
+              onChange={(val) => setValue('customer_id', val || '', { shouldValidate: true })}
+              error={errors.customer_id?.message}
+            />
           </div>
 
           <div className="space-y-2">
