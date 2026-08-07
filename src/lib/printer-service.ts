@@ -11,10 +11,9 @@ import { StoreSaleReceipt } from '@/components/receipts/StoreSaleReceipt'
 import { PaymentReceipt } from '@/components/receipts/PaymentReceipt'
 import { PassbookReceipt } from '@/components/receipts/PassbookReceipt'
 
-// ─── Shared font constant for receipts (Devanagari support for Hindi) ────────
-// Noto Sans Devanagari is loaded via Google Fonts in globals.css.
-// This font stack is used everywhere: receipt components, wrapAsHtml, canvas, and print CSS.
-export const RECEIPT_FONT_FAMILY = "'Noto Sans Devanagari', 'Courier New', Courier, monospace"
+// ─── Shared font constant for receipts (Classic Monospace with Devanagari support) ────────
+// Courier New is primary so English numbers, symbols & labels use classic thermal monospace.
+export const RECEIPT_FONT_FAMILY = "'Courier New', Courier, 'Courier Prime', 'Noto Sans Devanagari', monospace"
 
 
 export interface PrinterSettings {
@@ -532,7 +531,7 @@ function wrapAsHtml(text: string, settings: PrinterSettings): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
   const feedPadding = `${settings.paperFeedAfterPrint ?? 5}mm`
-  return `<pre style="font-family:'Noto Sans Devanagari','Courier New',Courier,monospace;font-size:13px;font-weight:600;line-height:1.3;color:#000;margin:0 auto;padding:0 0 ${feedPadding} 0;width:${w};white-space:pre-wrap;word-break:break-word;">${escaped}</pre>`
+  return `<pre style="font-family:'Courier New',Courier,'Courier Prime','Noto Sans Devanagari',monospace;font-size:13px;font-weight:600;line-height:1.3;color:#000;margin:0 auto;padding:0 0 ${feedPadding} 0;width:${w};white-space:pre-wrap;word-break:break-word;">${escaped}</pre>`
 }
 
 export function generatePurchaseHtml(purchase: any, settings: PrinterSettings, locale: Locale = 'en'): string {
@@ -640,7 +639,7 @@ export function triggerSystemPrint(htmlContent: string, paperWidth: '58mm' | '80
       }
       #thermal-receipt-container pre {
         margin: 0 auto !important;
-        font-family: 'Noto Sans Devanagari', 'Courier New', Courier, monospace !important;
+        font-family: 'Courier New', Courier, 'Courier Prime', 'Noto Sans Devanagari', monospace !important;
         font-size: 13px !important;
         font-weight: 600 !important;
         line-height: 1.3 !important;
@@ -708,7 +707,7 @@ async function renderTextToCanvas(text: string, settings: PrinterSettings): Prom
   const fontSize = is58mm ? 24 : 28
   const lineHeight = is58mm ? 32 : 36
 
-  const fontFamily = '"Noto Sans Devanagari", "Devanagari Sangam MN", "Arial Unicode MS", "Kohinoor Devanagari", sans-serif'
+  const fontFamily = '"Courier New", Courier, "Courier Prime", "Noto Sans Devanagari", monospace'
 
   const lines = text.split('\n')
   const newlineCount = Math.max(0, Math.round((settings.paperFeedAfterPrint ?? 5) / 4))
