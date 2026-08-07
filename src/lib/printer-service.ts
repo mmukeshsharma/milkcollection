@@ -237,7 +237,7 @@ function lineWidth(paperWidth: '58mm' | '80mm') {
 
 function getSep(style: 'dash' | 'equal' | 'clean' = 'dash', width: number) {
   if (style === 'equal') return '='.repeat(width)
-  if (style === 'clean') return ' '.repeat(width)
+  if (style === 'clean') return ''
   return '-'.repeat(width)
 }
 
@@ -249,7 +249,7 @@ function centre(text: string, width: number) {
 }
 
 const PADDED_LABELS: Record<string, Record<Locale, string>> = {
-  date: { en: 'Date      ', hi: 'दिनांक    ' },
+  date: { en: 'Date', hi: 'दिनांक' },
   customer: { en: 'Customer  ', hi: 'ग्राहक    ' },
   milkType: { en: 'Milk      ', hi: 'दूध       ' },
   qty: { en: 'Qty       ', hi: 'मात्रा    ' },
@@ -271,6 +271,14 @@ const PADDED_LABELS: Record<string, Record<Locale, string>> = {
 
 export function formatReceiptRow(key: string, value: string, locale: Locale, settings?: PrinterSettings, width: number = 32): string {
   const targetLocale = (settings && !settings.supportsHindi) ? 'en' : locale
+
+  // Fixed Column Exception Rule: For Date / दिनांक, place colon directly after with a single space
+  if (key === 'date') {
+    const label = targetLocale === 'hi' ? 'दिनांक' : 'Date'
+    return `${label} : ${value}`
+  }
+
+  // All Other Fields: Lock colon strictly at column 11 (10 chars label + space padding)
   const labelText = PADDED_LABELS[key]?.[targetLocale] ?? padEndVisual(tr(key, locale, settings), 10)
   const valStr = String(value)
   const available = width - 12
@@ -350,14 +358,14 @@ export function buildPurchaseText(purchase: any, settings: PrinterSettings, loca
   if (settings.showPhone !== false && settings.dairyPhone) {
     lines.push(centre(tr('phone', locale, settings) + ': ' + settings.dairyPhone, W))
   }
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('date', dateStr + ' ' + timeStr, locale, settings, W))
   lines.push(formatReceiptRow('customer', custDisplay, locale, settings, W))
   lines.push(formatReceiptRow('milkType', milkType + ' (' + shift + ')', locale, settings, W))
   lines.push(formatReceiptRow('qty', qty, locale, settings, W))
   lines.push(formatReceiptRow('fatSnf', fat + ' / ' + snf, locale, settings, W))
   lines.push(formatReceiptRow('rate', rate + '/L', locale, settings, W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('amount', amount, locale, settings, W))
 
   return lines.join('\n')
@@ -381,14 +389,14 @@ export function buildPaymentText(payment: any, settings: PrinterSettings, locale
   const lines: string[] = []
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('paymentReceipt', locale, settings), W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('date', dateStr + ' ' + timeStr, locale, settings, W))
   lines.push(formatReceiptRow('paidTo', custDisplay, locale, settings, W))
   lines.push(formatReceiptRow('method', payMethod, locale, settings, W))
   if (payment.reference_no) {
     lines.push(formatReceiptRow('refNo', payment.reference_no, locale, settings, W))
   }
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('amount', amount, locale, settings, W))
 
   return lines.join('\n')
@@ -413,13 +421,13 @@ export function buildSaleText(sale: any, settings: PrinterSettings, locale: Loca
   const lines: string[] = []
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('milkSale', locale, settings), W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('date', dateStr + ' ' + timeStr, locale, settings, W))
   lines.push(formatReceiptRow('buyer', buyerDisplay, locale, settings, W))
   lines.push(formatReceiptRow('milkType', milkType, locale, settings, W))
   lines.push(formatReceiptRow('qty', qty, locale, settings, W))
   lines.push(formatReceiptRow('rate', rate + '/L', locale, settings, W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('amount', amount, locale, settings, W))
 
   return lines.join('\n')
@@ -449,12 +457,12 @@ export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale:
   const lines: string[] = []
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('storeSale', locale, settings), W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('date', dateStr + ' ' + timeStr, locale, settings, W))
   lines.push(formatReceiptRow('customer', custDisplay, locale, settings, W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(tableHeader)
-  lines.push(S)
+  if (S) lines.push(S)
 
   items.forEach((item: any) => {
     const rawItemName = String(item.product_name || item.name || '')
@@ -466,7 +474,7 @@ export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale:
     lines.push(`${namePart}${ratePart}${qtyPart}${totalPart}`)
   })
 
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('grandTotal', cur(grandTotal), locale, settings, W))
 
   return lines.join('\n')
@@ -516,17 +524,17 @@ export function buildPassbookText(ledger: any[], customer: any, settings: Printe
   const lines: string[] = []
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('miniStatement', locale, settings), W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('customer', custDisplay, locale, settings, W))
   if (village) {
     lines.push(formatReceiptRow('village', village, locale, settings, W))
   }
   lines.push(formatReceiptRow('date', today, locale, settings, W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(pbHeader)
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(...ledgerLines)
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('netDue', netFormatted, locale, settings, W))
 
   return lines.join('\n')
@@ -539,12 +547,12 @@ export function buildTestText(settings: PrinterSettings, locale: Locale = 'en'):
   const lines: string[] = []
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('printerTest', locale, settings), W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(formatReceiptRow('paper', settings.paperWidth, locale, settings, W))
   lines.push(formatReceiptRow('mode', settings.connectionType, locale, settings, W))
   lines.push(formatReceiptRow('copies', String(settings.copies), locale, settings, W))
   lines.push(formatReceiptRow('autoPrint', settings.autoPrintAfterSave ? 'ON' : 'OFF', locale, settings, W))
-  lines.push(S)
+  if (S) lines.push(S)
   lines.push(centre(tr('testOk', locale, settings), W))
   lines.push(centre(new Date().toLocaleString(locale === 'hi' ? 'hi-IN' : 'en-IN'), W))
 
