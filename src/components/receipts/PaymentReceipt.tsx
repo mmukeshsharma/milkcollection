@@ -1,5 +1,5 @@
 import React from 'react'
-import { buildPaymentText, type PrinterSettings } from '@/lib/printer-service'
+import { buildPaymentText, RECEIPT_FONT_FAMILY, type PrinterSettings } from '@/lib/printer-service'
 
 interface Props {
   data: any
@@ -17,7 +17,7 @@ export const PaymentReceipt: React.FC<Props> = ({ data, settings, locale = 'en',
   return (
     <pre
       style={{
-        fontFamily: "'Courier New', Courier, monospace",
+        fontFamily: RECEIPT_FONT_FAMILY,
         fontSize: mode === 'preview' ? '13px' : '10px',
         lineHeight: 1.3,
         color: '#000000',

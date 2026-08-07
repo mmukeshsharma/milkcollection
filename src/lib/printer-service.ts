@@ -11,6 +11,11 @@ import { StoreSaleReceipt } from '@/components/receipts/StoreSaleReceipt'
 import { PaymentReceipt } from '@/components/receipts/PaymentReceipt'
 import { PassbookReceipt } from '@/components/receipts/PassbookReceipt'
 
+// ─── Shared font constant for receipts (Devanagari support for Hindi) ────────
+// Noto Sans Devanagari is loaded via Google Fonts in globals.css.
+// This font stack is used everywhere: receipt components, wrapAsHtml, canvas, and print CSS.
+export const RECEIPT_FONT_FAMILY = "'Noto Sans Devanagari', 'Courier New', Courier, monospace"
+
 
 export interface PrinterSettings {
   dairyName: string
@@ -493,7 +498,7 @@ function wrapAsHtml(text: string, settings: PrinterSettings): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
   const feedPadding = `${settings.paperFeedAfterPrint ?? 5}mm`
-  return `<pre style="font-family:'Courier New',Courier,monospace;font-size:10px;line-height:1.2;color:#000;margin:0 auto;padding:0 0 ${feedPadding} 0;width:${w};white-space:pre-wrap;word-break:break-word;">${escaped}</pre>`
+  return `<pre style="font-family:'Noto Sans Devanagari','Courier New',Courier,monospace;font-size:10px;line-height:1.2;color:#000;margin:0 auto;padding:0 0 ${feedPadding} 0;width:${w};white-space:pre-wrap;word-break:break-word;">${escaped}</pre>`
 }
 
 export function generatePurchaseHtml(purchase: any, settings: PrinterSettings, locale: Locale = 'en'): string {
@@ -601,7 +606,7 @@ export function triggerSystemPrint(htmlContent: string, paperWidth: '58mm' | '80
       }
       #thermal-receipt-container pre {
         margin: 0 auto !important;
-        font-family: 'Courier New', Courier, monospace !important;
+        font-family: 'Noto Sans Devanagari', 'Courier New', Courier, monospace !important;
         font-size: 10px !important;
         line-height: 1.2 !important;
         color: #000 !important;
@@ -633,7 +638,35 @@ export function triggerSystemPrint(htmlContent: string, paperWidth: '58mm' | '80
 
 // ─── Canvas rendering and ESC/POS bit image helper functions ──────────────────
 
-function renderTextToCanvas(text: string, settings: PrinterSettings): HTMLCanvasElement {
+/**
+ * Ensures Noto Sans Devanagari is loaded before canvas drawing.
+ * Canvas API can only use fonts that are fully loaded — without this,
+ * Hindi text renders as empty boxes (tofu) which become garbage on the printer.
+ */
+async function ensureDevanagariFont(): Promise<void> {
+  if (typeof document === 'undefined') return
+  try {
+    // Check if font is already loaded
+    const isLoaded = document.fonts.check('bold 20px "Noto Sans Devanagari"')
+    if (isLoaded) return
+
+    // Force-load the font with a timeout
+    await Promise.race([
+      document.fonts.load('bold 20px "Noto Sans Devanagari"'),
+      new Promise(resolve => setTimeout(resolve, 3000)) // 3s timeout
+    ])
+
+    // Wait for all fonts to be ready
+    await document.fonts.ready
+  } catch (e) {
+    console.warn('Failed to preload Devanagari font for canvas, Hindi may not render:', e)
+  }
+}
+
+async function renderTextToCanvas(text: string, settings: PrinterSettings): Promise<HTMLCanvasElement> {
+  // Wait for Hindi font to be loaded before drawing
+  await ensureDevanagariFont()
+
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
 
@@ -641,6 +674,9 @@ function renderTextToCanvas(text: string, settings: PrinterSettings): HTMLCanvas
   const canvasWidth = is58mm ? 384 : 576
   const fontSize = 20
   const lineHeight = 26
+
+  // Use Noto Sans Devanagari as PRIMARY font for canvas (it supports both Latin + Hindi)
+  const fontFamily = '"Noto Sans Devanagari", "Courier New", Courier, monospace'
 
   const lines = text.split('\n')
   const newlineCount = Math.max(0, Math.round((settings.paperFeedAfterPrint ?? 5) / 4))
@@ -654,7 +690,7 @@ function renderTextToCanvas(text: string, settings: PrinterSettings): HTMLCanvas
   ctx.fillRect(0, 0, canvasWidth, height)
 
   ctx.fillStyle = '#000000'
-  ctx.font = `bold ${fontSize}px "Courier New", Courier, "Noto Sans Devanagari", monospace`
+  ctx.font = `bold ${fontSize}px ${fontFamily}`
   ctx.textBaseline = 'top'
 
   lines.forEach((line, index) => {
@@ -840,7 +876,7 @@ export async function triggerBluetoothPrint(
     let dataBytes: Uint8Array
 
     if (hasHindi && typeof document !== 'undefined') {
-      const canvas = renderTextToCanvas(plainText, settings)
+      const canvas = await renderTextToCanvas(plainText, settings)
       dataBytes = canvasToEscPos(canvas)
     } else {
       const newlineCount = Math.max(0, Math.round((settings.paperFeedAfterPrint ?? 5) / 4))
