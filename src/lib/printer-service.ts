@@ -77,29 +77,34 @@ export function getReceiptLocale(settings: PrinterSettings, appLocale: 'en' | 'h
   return settings.receiptLanguage || 'en'
 }
 
-// ─── Bilingual label dictionary ──────────────────────────────────────────────
+// ─── Bilingual label dictionary & Translation Helpers ───────────────────────
 
 type Locale = 'en' | 'hi'
 
 const L: Record<string, Record<Locale, string>> = {
-  // Header
+  // Header & Slips
   milkCenter: { en: 'Milk Collection Center', hi: 'दूध संग्रह केंद्र' },
   phone: { en: 'Ph', hi: 'फोन' },
-  miniStatement: { en: 'Mini Statement', hi: 'मिनी पासबुक' },
+  miniStatement: { en: 'MINI STATEMENT', hi: 'मिनी पासबुक' },
+  paymentReceipt: { en: 'PAYMENT SLIP', hi: 'भुगतान रसीद' },
+  milkSale: { en: 'MILK SALE', hi: 'दूध बिक्री' },
+  storeSale: { en: 'STORE BILL', hi: 'स्टोर बिल' },
   printerTest: { en: 'PRINTER TEST', hi: 'प्रिंटर परीक्षण' },
   testOk: { en: 'TEST OK', hi: 'परीक्षण सफल' },
-  // Purchase receipt
+  // Common Fields
   date: { en: 'Date', hi: 'दिनांक' },
   time: { en: 'Time', hi: 'समय' },
   customer: { en: 'Customer', hi: 'ग्राहक' },
   code: { en: 'Code', hi: 'कोड' },
-  milkType: { en: 'Milk Type', hi: 'दूध प्रकार' },
+  milkType: { en: 'Milk', hi: 'दूध' },
   shift: { en: 'Shift', hi: 'पाली' },
   qty: { en: 'Qty', hi: 'मात्रा' },
   fat: { en: 'Fat', hi: 'फैट' },
   snf: { en: 'SNF', hi: 'एसएनएफ' },
+  fatSnf: { en: 'Fat/SNF', hi: 'फैट/SNF' },
   rate: { en: 'Rate', hi: 'दर' },
   amount: { en: 'Amount', hi: 'राशि' },
+  total: { en: 'Total', hi: 'कुल' },
   // Payment receipt
   invoiceNo: { en: 'Invoice No', hi: 'चालान क्र.' },
   paidTo: { en: 'Paid To', hi: 'प्राप्तकर्ता' },
@@ -108,21 +113,60 @@ const L: Record<string, Record<Locale, string>> = {
   refNo: { en: 'Ref No', hi: 'संदर्भ क्र.' },
   // Sale receipt
   buyer: { en: 'Buyer', hi: 'खरीदार' },
-  qtySold: { en: 'Qty Sold', hi: 'बेची मात्रा' },
+  qtySold: { en: 'Qty Sold', hi: 'मात्रा' },
   // Passbook
   village: { en: 'Village', hi: 'गांव' },
   netDue: { en: 'Net Due', hi: 'कुल बकाया' },
-  // Passbook table header cols
   pbDate: { en: 'Date', hi: 'तारीख' },
   pbParticulars: { en: 'Entry', hi: 'प्रविष्टि' },
   pbAmt: { en: 'Amt', hi: 'राशि' },
   pbBal: { en: 'Bal', hi: 'शेष' },
-  // Settings test
-  grandTotal: { en: 'Grand Total', hi: 'कुल राशि' },
+  // Settings / Store
+  item: { en: 'Item', hi: 'सामग्री' },
+  grandTotal: { en: 'TOTAL', hi: 'कुल राशि' },
   paper: { en: 'Paper', hi: 'कागज' },
   mode: { en: 'Mode', hi: 'मोड' },
   copies: { en: 'Copies', hi: 'प्रतियां' },
   autoPrint: { en: 'Auto Print', hi: 'ऑटो प्रिंट' },
+}
+
+/** Auto-translate common terms to Hindi when app/receipt locale is Hindi */
+const COMMON_TRANSLATIONS: Record<string, string> = {
+  cash: 'नकद',
+  upi: 'यूपीआई',
+  bank: 'बैंक',
+  cheque: 'चेक',
+  online: 'ऑनलाइन',
+  purchase: 'खरीद',
+  sale: 'बिक्री',
+  payment: 'भुगतान',
+  cow: 'गाय',
+  buffalo: 'भैंस',
+  mixed: 'मिश्रित',
+  morning: 'सुबह',
+  evening: 'शाम',
+  feed: 'खली/दाना',
+  milk: 'दूध',
+  ghee: 'घी',
+  paneer: 'पनीर',
+  butter: 'मक्खन',
+  curd: 'दही',
+  dahi: 'दही',
+}
+
+export function autoTranslateToHindi(text: string): string {
+  if (!text) return ''
+  const clean = String(text).trim()
+  const lower = clean.toLowerCase()
+  if (COMMON_TRANSLATIONS[lower]) {
+    return COMMON_TRANSLATIONS[lower]
+  }
+  let translated = clean
+  for (const [enKey, hiVal] of Object.entries(COMMON_TRANSLATIONS)) {
+    const regex = new RegExp(`\\b${enKey}\\b`, 'gi')
+    translated = translated.replace(regex, hiVal)
+  }
+  return translated
 }
 
 /** Translate a key to the given locale, with fallback to English if supportsHindi is false */
@@ -158,7 +202,6 @@ function localShift(raw: string, locale: Locale, settings?: PrinterSettings): st
 
 // ─── Fixed-width text helpers ────────────────────────────────────────────────
 
-// Computes the visual character cell width of Hindi/English text in monospace fonts
 export function getVisualWidth(text: string): number {
   let width = 0
   const combiningRegex = /[\u0901\u0902\u0903\u093c\u093e\u093f\u0940-\u094c\u094d\u0951-\u0957\u0962\u0963]/
@@ -168,7 +211,6 @@ export function getVisualWidth(text: string): number {
     if (combiningRegex.test(char)) {
       continue
     }
-    // Zero width if combining consonant conjunct
     if (i > 0 && text[i - 1] === '\u094d' && char >= '\u0900' && char <= '\u097f') {
       continue
     }
@@ -177,7 +219,6 @@ export function getVisualWidth(text: string): number {
   return width
 }
 
-// Right pad text taking Unicode visual cell counts into account
 export function padEndVisual(text: string, targetWidth: number): string {
   const vWidth = getVisualWidth(text)
   if (vWidth >= targetWidth) return text
@@ -199,23 +240,12 @@ function centre(text: string, width: number) {
   return ' '.repeat(pad) + text
 }
 
-/**
- * Two-column row — label fixed to 10 chars, then " : ", then value.
- * Uses getVisualWidth to maintain correct spacing with diacritics.
- */
-function row(label: string, value: string, width: number) {
-  return rowCustom(label, value, 9, width)
-}
-
 export function rowCustom(label: string, value: string, padWidth: number, width: number) {
   const labelWidth = getVisualWidth(label)
   const valStr = String(value)
   const valWidth = getVisualWidth(valStr)
 
-  // Ideal padding is padWidth
   let currentPad = padWidth
-
-  // If label + ": " + value exceeds width, reduce padding but keep at least labelWidth
   if (currentPad + 2 + valWidth > width) {
     const neededPad = width - 2 - valWidth
     currentPad = Math.max(labelWidth, neededPad)
@@ -253,22 +283,25 @@ function cur(amount: number): string {
   return 'Rs.' + amount.toFixed(2)
 }
 
-// ─── Receipt builders ─────────────────────────────────────────────────────────
+// ─── Classic Receipt builders ─────────────────────────────────────────────────
 
 export function buildPurchaseText(purchase: any, settings: PrinterSettings, locale: Locale = 'en'): string {
   const W = lineWidth(settings.paperWidth)
   const EQ = sep('=', W)
   const DA = sep('-', W)
 
-  const customerName = purchase.customers?.name || purchase.customerName || 'Farmer'
-  const customerCode = purchase.customers?.customer_code || purchase.customerCode || 'N/A'
+  const rawName = purchase.customers?.name || purchase.customerName || 'Farmer'
+  const rawCode = purchase.customers?.customer_code || purchase.customerCode || ''
+  const custName = locale === 'hi' ? autoTranslateToHindi(rawName) : rawName
+  const custDisplay = rawCode && rawCode !== 'N/A' ? `${rawCode}- ${custName}` : custName
+
   const dateStr = fmtDate(purchase.purchase_date || new Date().toISOString())
   const timeStr = fmtTime(purchase.created_at || new Date().toISOString())
   const milkType = localMilkType(purchase.milk_type, locale, settings)
   const shift = localShift(purchase.shift, locale, settings)
   const qty = Number(purchase.quantity_liters || 0).toFixed(2) + ' L'
-  const fat = Number(purchase.fat_percentage || 0).toFixed(1)
-  const snf = Number(purchase.snf_percentage || 0).toFixed(1)
+  const fat = Number(purchase.fat_percentage || 0).toFixed(1) + '%'
+  const snf = Number(purchase.snf_percentage || 0).toFixed(1) + '%'
   const rate = cur(Number(purchase.rate_per_liter || 0))
   const amount = cur(Number(purchase.total_amount || 0))
 
@@ -278,16 +311,15 @@ export function buildPurchaseText(purchase: any, settings: PrinterSettings, loca
     centre(settings.dairySubtitle, W),
     centre(tr('phone', locale, settings) + ': ' + settings.dairyPhone, W),
     EQ,
-    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 6, W),
-    rowCustom(tr('code', locale, settings), customerCode, 11, W),
-    rowCustom(tr('customer', locale, settings), customerName, 11, W),
-    rowCustom(tr('milkType', locale, settings), milkType + ', ' + shift, 11, W),
-    rowCustom(tr('qty', locale, settings), qty, 11, W),
-    rowCustom(tr('fat', locale, settings), fat, 11, W),
-    rowCustom(tr('snf', locale, settings), snf, 11, W),
-    rowCustom(tr('rate', locale, settings), rate, 11, W),
+    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W),
+    rowCustom(tr('customer', locale, settings), custDisplay, 8, W),
+    rowCustom(tr('milkType', locale, settings), milkType + ' (' + shift + ')', 8, W),
+    rowCustom(tr('qty', locale, settings), qty, 8, W),
+    rowCustom(tr('fatSnf', locale, settings), fat + ' / ' + snf, 8, W),
+    rowCustom(tr('rate', locale, settings), rate + '/L', 8, W),
     DA,
-    rowCustom(tr('amount', locale, settings), amount, 11, W),
+    rowCustom(tr('amount', locale, settings), amount, 8, W),
+    EQ,
   ].join('\n')
 }
 
@@ -296,26 +328,29 @@ export function buildPaymentText(payment: any, settings: PrinterSettings, locale
   const EQ = sep('=', W)
   const DA = sep('-', W)
 
-  const customerName = payment.customers?.name || payment.customerName || 'Farmer'
-  const customerCode = payment.customers?.customer_code || payment.customerCode || 'N/A'
+  const rawName = payment.customers?.name || payment.customerName || 'Farmer'
+  const rawCode = payment.customers?.customer_code || payment.customerCode || ''
+  const custName = locale === 'hi' ? autoTranslateToHindi(rawName) : rawName
+  const custDisplay = rawCode && rawCode !== 'N/A' ? `${rawCode}- ${custName}` : custName
+
   const dateStr = fmtDate(payment.payment_date || new Date().toISOString())
   const timeStr = fmtTime(payment.created_at || new Date().toISOString())
-  const payMethod = String(payment.payment_method || 'cash').toUpperCase()
+  const rawMethod = String(payment.payment_method || 'cash')
+  const payMethod = locale === 'hi' ? autoTranslateToHindi(rawMethod) : rawMethod.toUpperCase()
   const amount = cur(Number(payment.amount || 0))
 
   return [
     EQ,
     centre(settings.dairyName, W),
-    centre(settings.dairySubtitle, W),
-    centre(tr('phone', locale, settings) + ': ' + settings.dairyPhone, W),
+    centre(tr('paymentReceipt', locale, settings), W),
     EQ,
-    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 6, W),
-    rowCustom(tr('paidTo', locale, settings), customerName, 11, W),
-    rowCustom(tr('code', locale, settings), customerCode, 11, W),
-    rowCustom(tr('method', locale, settings), payMethod, 11, W),
-    ...(payment.reference_no ? [rowCustom(tr('refNo', locale, settings), payment.reference_no, 11, W)] : []),
+    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W),
+    rowCustom(tr('paidTo', locale, settings), custDisplay, 8, W),
+    rowCustom(tr('method', locale, settings), payMethod, 8, W),
+    ...(payment.reference_no ? [rowCustom(tr('refNo', locale, settings), payment.reference_no, 8, W)] : []),
     DA,
-    rowCustom(tr('amount', locale, settings), amount, 11, W),
+    rowCustom(tr('amount', locale, settings), amount, 8, W),
+    EQ,
   ].join('\n')
 }
 
@@ -324,7 +359,11 @@ export function buildSaleText(sale: any, settings: PrinterSettings, locale: Loca
   const EQ = sep('=', W)
   const DA = sep('-', W)
 
-  const buyerName = sale.buyer_name || 'Buyer'
+  const rawBuyer = sale.buyer_name || 'Buyer'
+  const rawCode = sale.buyer_code || sale.customerCode || ''
+  const buyerName = locale === 'hi' ? autoTranslateToHindi(rawBuyer) : rawBuyer
+  const buyerDisplay = rawCode && rawCode !== 'N/A' ? `${rawCode}- ${buyerName}` : buyerName
+
   const dateStr = fmtDate(sale.sale_date || new Date().toISOString())
   const timeStr = fmtTime(sale.created_at || new Date().toISOString())
   const milkType = localMilkType(sale.milk_type, locale, settings)
@@ -335,16 +374,16 @@ export function buildSaleText(sale: any, settings: PrinterSettings, locale: Loca
   return [
     EQ,
     centre(settings.dairyName, W),
-    centre(settings.dairySubtitle, W),
-    centre(tr('phone', locale, settings) + ': ' + settings.dairyPhone, W),
+    centre(tr('milkSale', locale, settings), W),
     EQ,
-    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 6, W),
-    rowCustom(tr('buyer', locale, settings), buyerName, 11, W),
-    rowCustom(tr('milkType', locale, settings), milkType, 11, W),
-    rowCustom(tr('qtySold', locale, settings), qty, 11, W),
-    rowCustom(tr('rate', locale, settings), rate, 11, W),
+    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W),
+    rowCustom(tr('buyer', locale, settings), buyerDisplay, 8, W),
+    rowCustom(tr('milkType', locale, settings), milkType, 8, W),
+    rowCustom(tr('qty', locale, settings), qty, 8, W),
+    rowCustom(tr('rate', locale, settings), rate + '/L', 8, W),
     DA,
-    rowCustom(tr('amount', locale, settings), amount, 11, W),
+    rowCustom(tr('amount', locale, settings), amount, 8, W),
+    EQ,
   ].join('\n')
 }
 
@@ -353,54 +392,48 @@ export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale:
   const EQ = sep('=', W)
   const DA = sep('-', W)
 
-  const customerName = sale.customerName || sale.customers?.name || 'Guest Customer'
-  const customerCode = sale.customerCode || sale.customers?.customer_code || 'WALK-IN'
+  const rawName = sale.customerName || sale.customers?.name || 'Guest Customer'
+  const rawCode = sale.customerCode || sale.customers?.customer_code || ''
+  const custName = locale === 'hi' ? autoTranslateToHindi(rawName) : rawName
+  const custDisplay = rawCode && rawCode !== 'WALK-IN' && rawCode !== 'N/A' ? `${rawCode}- ${custName}` : custName
+
   const dateStr = fmtDate(sale.sale_date || new Date().toISOString())
   const timeStr = fmtTime(sale.created_at || new Date().toISOString())
 
   const items = sale.items || []
   const grandTotal = sale.total_amount || 0
 
-  // Label variables
-  const labelItem = locale === 'en' ? 'Items' : tr('pbParticulars', locale, settings)
-  const labelRat = locale === 'en' ? 'Rate' : tr('rate', locale, settings)
-  const labelQty = tr('qty', locale, settings)
-  const labelAmt = locale === 'en' ? 'Total' : (locale === 'hi' ? 'कुल' : tr('amount', locale, settings))
-
-  // Align column headers to exactly 32 chars: 12 + 7 + 5 + 8 = 32
-  const colItem = padEndVisual(labelItem, 12)
-  const colRat = padEndVisual(labelRat, 7)
-  const colQty = padEndVisual(labelQty, 5)
-  const colAmt = labelAmt.padStart(8, ' ')
+  const colItem = padEndVisual(tr('item', locale, settings), 12)
+  const colRat = padEndVisual(tr('rate', locale, settings), 6)
+  const colQty = padEndVisual(tr('qty', locale, settings), 4)
+  const colAmt = (tr('total', locale, settings)).padStart(8, ' ')
   const tableHeader = `${colItem}${colRat}${colQty}${colAmt}`
-
-  const isHi = locale === 'hi'
-  const datePad = isHi ? 7 : 6
 
   let output = [
     EQ,
     centre(settings.dairyName, W),
-    centre(settings.dairySubtitle, W),
-    centre(tr('phone', locale, settings) + ': ' + settings.dairyPhone, W),
+    centre(tr('storeSale', locale, settings), W),
     EQ,
-    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, datePad, W),
-    rowCustom(tr('code', locale, settings), customerCode, 11, W),
-    rowCustom(tr('customer', locale, settings), customerName, 11, W),
+    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W),
+    rowCustom(tr('customer', locale, settings), custDisplay, 8, W),
     DA,
     tableHeader,
     DA,
   ]
 
   items.forEach((item: any) => {
-    const namePart = padEndVisual(String(item.product_name || item.name || '').slice(0, 12), 12)
-    const ratePart = `Rs.${Number(item.price_per_item || item.price || 0).toFixed(0)}`.padStart(7, ' ')
-    const qtyPart = `${item.quantity}`.padStart(5, ' ')
+    const rawItemName = String(item.product_name || item.name || '')
+    const itemName = locale === 'hi' ? autoTranslateToHindi(rawItemName) : rawItemName
+    const namePart = padEndVisual(itemName.slice(0, 12), 12)
+    const ratePart = `${Number(item.price_per_item || item.price || 0).toFixed(0)}`.padStart(6, ' ')
+    const qtyPart = `${item.quantity}`.padStart(4, ' ')
     const totalPart = `${Number(item.total_amount || item.total || 0).toFixed(0)}`.padStart(8, ' ')
     output.push(`${namePart}${ratePart}${qtyPart}${totalPart}`)
   })
 
   output.push(DA)
-  output.push(rowCustom(tr('grandTotal', locale, settings), cur(grandTotal), 11, W))
+  output.push(rowCustom(tr('grandTotal', locale, settings), cur(grandTotal), 8, W))
+  output.push(EQ)
 
   return output.join('\n')
 }
@@ -410,40 +443,37 @@ export function buildPassbookText(ledger: any[], customer: any, settings: Printe
   const EQ = sep('=', W)
   const DA = sep('-', W)
 
-  const custName = customer?.name || 'N/A'
-  const custCode = customer?.customer_code || 'N/A'
+  const rawName = customer?.name || 'N/A'
+  const rawCode = customer?.customer_code || ''
+  const custName = locale === 'hi' ? autoTranslateToHindi(rawName) : rawName
+  const custDisplay = rawCode && rawCode !== 'N/A' ? `${rawCode}- ${custName}` : custName
   const village = customer?.village || ''
-  const today = fmtDate(new Date().toISOString()) + ' ' + fmtTime(new Date().toISOString())
+  const today = fmtDate(new Date().toISOString())
 
-  // Dynamically aligned Passbook headers using padEndVisual to exactly 32 chars: 5 + 1 + 10 + 2 + 6 + 2 + 6 = 32
   const colDate = padEndVisual(tr('pbDate', locale, settings), 5)
-  const colPart = padEndVisual(locale === 'en' ? 'Entry' : tr('pbParticulars', locale, settings), 10)
-  const colAmt = (locale === 'en' ? 'Amt' : tr('pbAmt', locale, settings)).padStart(6, ' ')
-  const colBal = (locale === 'en' ? 'Bal' : tr('pbBal', locale, settings)).padStart(6, ' ')
-  const pbHeader = `${colDate} ${colPart}  ${colAmt}  ${colBal}`
+  const colPart = padEndVisual(tr('pbParticulars', locale, settings), 11)
+  const colAmt = tr('pbAmt', locale, settings).padStart(7, ' ')
+  const colBal = tr('pbBal', locale, settings).padStart(7, ' ')
+  const pbHeader = `${colDate} ${colPart} ${colAmt} ${colBal}`
 
   const ledgerLines = ledger.map(r => {
     const d = new Date(r.transaction_date)
-    const dateLabel = String(d.getDate()).padStart(2, '0') + '/' +
-      String(d.getMonth() + 1).padStart(2, '0')
+    const dateLabel = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0')
     const dateCol = padEndVisual(dateLabel, 5)
-    
-    // Particulars/entry padded to 10
-    const particulars = padEndVisual(String(r.particulars || r.entry || '').slice(0, 10), 10)
-    
-    // Amount with sign (+/-) padded to 6
+
+    const rawParticulars = String(r.particulars || r.entry || '')
+    const particularsText = locale === 'hi' ? autoTranslateToHindi(rawParticulars) : rawParticulars
+    const particulars = padEndVisual(particularsText.slice(0, 11), 11)
+
     const credit = Number(r.credit_amount || 0)
     const debit = Number(r.debit_amount || 0)
-    const amtVal = credit > 0
-      ? ('+' + credit.toFixed(0))
-      : (debit > 0 ? ('-' + debit.toFixed(0)) : '0')
-    const amtCol = amtVal.padStart(6, ' ')
-    
-    // Running balance padded to 6
+    const amtVal = credit > 0 ? ('+' + credit.toFixed(0)) : (debit > 0 ? ('-' + debit.toFixed(0)) : '0')
+    const amtCol = amtVal.padStart(7, ' ')
+
     const balVal = Number(r.running_balance || 0).toFixed(0)
-    const balCol = balVal.padStart(6, ' ')
-    
-    return `${dateCol} ${particulars}  ${amtCol}  ${balCol}`
+    const balCol = balVal.padStart(7, ' ')
+
+    return `${dateCol} ${particulars} ${amtCol} ${balCol}`
   })
 
   const net = ledger.length > 0 ? ledger[ledger.length - 1].running_balance : 0
@@ -454,16 +484,16 @@ export function buildPassbookText(ledger: any[], customer: any, settings: Printe
     centre(settings.dairyName, W),
     centre(tr('miniStatement', locale, settings), W),
     EQ,
-    rowCustom(tr('customer', locale, settings), custName, 11, W),
-    rowCustom(tr('code', locale, settings), custCode, 11, W),
-    ...(village ? [rowCustom(tr('village', locale, settings), village, 11, W)] : []),
-    rowCustom(tr('date', locale, settings), today, 6, W),
+    rowCustom(tr('customer', locale, settings), custDisplay, 8, W),
+    ...(village ? [rowCustom(tr('village', locale, settings), village, 8, W)] : []),
+    rowCustom(tr('date', locale, settings), today, 8, W),
     DA,
     pbHeader,
     DA,
     ...ledgerLines,
     DA,
-    rowCustom(tr('netDue', locale, settings), netFormatted, 11, W),
+    rowCustom(tr('netDue', locale, settings), netFormatted, 8, W),
+    EQ,
   ].join('\n')
 }
 
@@ -477,14 +507,15 @@ export function buildTestText(settings: PrinterSettings, locale: Locale = 'en'):
     centre(settings.dairyName, W),
     centre(tr('printerTest', locale, settings), W),
     EQ,
-    rowCustom(tr('paper', locale, settings), settings.paperWidth, 11, W),
-    rowCustom(tr('mode', locale, settings), settings.connectionType, 11, W),
-    rowCustom(tr('copies', locale, settings), String(settings.copies), 11, W),
-    rowCustom(tr('autoPrint', locale, settings), settings.autoPrintAfterSave ? 'ON' : 'OFF', 11, W),
+    rowCustom(tr('paper', locale, settings), settings.paperWidth, 8, W),
+    rowCustom(tr('mode', locale, settings), settings.connectionType, 8, W),
+    rowCustom(tr('copies', locale, settings), String(settings.copies), 8, W),
+    rowCustom(tr('autoPrint', locale, settings), settings.autoPrintAfterSave ? 'ON' : 'OFF', 8, W),
     DA,
     centre(tr('testOk', locale, settings), W),
     DA,
-    centre(new Date().toLocaleString('en-IN'), W),
+    centre(new Date().toLocaleString(locale === 'hi' ? 'hi-IN' : 'en-IN'), W),
+    EQ,
   ].join('\n')
 }
 
@@ -675,8 +706,8 @@ async function renderTextToCanvas(text: string, settings: PrinterSettings): Prom
   const fontSize = 20
   const lineHeight = 26
 
-  // Use Noto Sans Devanagari as PRIMARY font for canvas (it supports both Latin + Hindi)
-  const fontFamily = '"Noto Sans Devanagari", "Courier New", Courier, monospace'
+  // Use Noto Sans Devanagari + native system Devanagari sans-serif fallback for mobile devices
+  const fontFamily = '"Noto Sans Devanagari", "Devanagari Sangam MN", "Arial Unicode MS", "Kohinoor Devanagari", sans-serif'
 
   const lines = text.split('\n')
   const newlineCount = Math.max(0, Math.round((settings.paperFeedAfterPrint ?? 5) / 4))
@@ -713,6 +744,12 @@ function canvasToEscPos(canvas: HTMLCanvasElement): Uint8Array {
   const widthBytes = width / 8
   const escPosData: number[] = []
 
+  // Initialize printer: ESC @
+  escPosData.push(0x1B, 0x40)
+
+  // ESC 3 0 -> Set line spacing to 0 to prevent line gap gaps between raster image rows
+  escPosData.push(0x1B, 0x33, 0x00)
+
   // ESC/POS header for raster image: GS v 0 0
   // GS = 29 (0x1D), v = 118 (0x76), 0 = 48 (0x30), m = 0 (0x00)
   escPosData.push(0x1D, 0x76, 0x30, 0x00)
@@ -739,6 +776,9 @@ function canvasToEscPos(canvas: HTMLCanvasElement): Uint8Array {
       escPosData.push(byteVal)
     }
   }
+
+  // Reset line spacing to default: ESC 2
+  escPosData.push(0x1B, 0x32)
 
   return new Uint8Array(escPosData)
 }
@@ -883,10 +923,11 @@ export async function triggerBluetoothPrint(
       dataBytes = encoder.encode(plainText + '\n'.repeat(newlineCount))
     }
 
-    const CHUNK = 256
+    // 64-byte chunks with 15ms delay to prevent buffer drop on mobile Bluetooth thermal printers
+    const CHUNK = 64
     for (let i = 0; i < dataBytes.length; i += CHUNK) {
       await writeChar.writeValue(dataBytes.slice(i, i + CHUNK))
-      await new Promise((resolve) => setTimeout(resolve, 5))
+      await new Promise((resolve) => setTimeout(resolve, 15))
     }
     await writeChar.writeValue(cutCmd)
     await server.disconnect()
