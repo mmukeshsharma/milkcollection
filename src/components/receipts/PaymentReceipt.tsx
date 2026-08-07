@@ -18,7 +18,8 @@ export const PaymentReceipt: React.FC<Props> = ({ data, settings, locale = 'en',
     <pre
       style={{
         fontFamily: RECEIPT_FONT_FAMILY,
-        fontSize: mode === 'preview' ? '13px' : '10px',
+        fontSize: mode === 'preview' ? '14px' : '12px',
+        fontWeight: 600,
         lineHeight: 1.3,
         color: '#000000',
         backgroundColor: '#FFFFFF',

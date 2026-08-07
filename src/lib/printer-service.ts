@@ -91,6 +91,7 @@ const L: Record<string, Record<Locale, string>> = {
   storeSale: { en: 'STORE BILL', hi: 'स्टोर बिल' },
   printerTest: { en: 'PRINTER TEST', hi: 'प्रिंटर परीक्षण' },
   testOk: { en: 'TEST OK', hi: 'परीक्षण सफल' },
+  thankYou: { en: 'Thank You! Visit Again', hi: 'धन्यवाद! पुनः पधारें' },
   // Common Fields
   date: { en: 'Date', hi: 'दिनांक' },
   time: { en: 'Time', hi: 'समय' },
@@ -320,6 +321,7 @@ export function buildPurchaseText(purchase: any, settings: PrinterSettings, loca
     DA,
     rowCustom(tr('amount', locale, settings), amount, 8, W),
     EQ,
+    centre(tr('thankYou', locale, settings), W),
   ].join('\n')
 }
 
@@ -351,6 +353,7 @@ export function buildPaymentText(payment: any, settings: PrinterSettings, locale
     DA,
     rowCustom(tr('amount', locale, settings), amount, 8, W),
     EQ,
+    centre(tr('thankYou', locale, settings), W),
   ].join('\n')
 }
 
@@ -384,6 +387,7 @@ export function buildSaleText(sale: any, settings: PrinterSettings, locale: Loca
     DA,
     rowCustom(tr('amount', locale, settings), amount, 8, W),
     EQ,
+    centre(tr('thankYou', locale, settings), W),
   ].join('\n')
 }
 
@@ -434,6 +438,7 @@ export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale:
   output.push(DA)
   output.push(rowCustom(tr('grandTotal', locale, settings), cur(grandTotal), 8, W))
   output.push(EQ)
+  output.push(centre(tr('thankYou', locale, settings), W))
 
   return output.join('\n')
 }
@@ -494,6 +499,7 @@ export function buildPassbookText(ledger: any[], customer: any, settings: Printe
     DA,
     rowCustom(tr('netDue', locale, settings), netFormatted, 8, W),
     EQ,
+    centre(tr('thankYou', locale, settings), W),
   ].join('\n')
 }
 
@@ -516,6 +522,7 @@ export function buildTestText(settings: PrinterSettings, locale: Locale = 'en'):
     DA,
     centre(new Date().toLocaleString(locale === 'hi' ? 'hi-IN' : 'en-IN'), W),
     EQ,
+    centre(tr('thankYou', locale, settings), W),
   ].join('\n')
 }
 
@@ -529,7 +536,7 @@ function wrapAsHtml(text: string, settings: PrinterSettings): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
   const feedPadding = `${settings.paperFeedAfterPrint ?? 5}mm`
-  return `<pre style="font-family:'Noto Sans Devanagari','Courier New',Courier,monospace;font-size:10px;line-height:1.2;color:#000;margin:0 auto;padding:0 0 ${feedPadding} 0;width:${w};white-space:pre-wrap;word-break:break-word;">${escaped}</pre>`
+  return `<pre style="font-family:'Noto Sans Devanagari','Courier New',Courier,monospace;font-size:13px;font-weight:600;line-height:1.3;color:#000;margin:0 auto;padding:0 0 ${feedPadding} 0;width:${w};white-space:pre-wrap;word-break:break-word;">${escaped}</pre>`
 }
 
 export function generatePurchaseHtml(purchase: any, settings: PrinterSettings, locale: Locale = 'en'): string {
@@ -638,8 +645,9 @@ export function triggerSystemPrint(htmlContent: string, paperWidth: '58mm' | '80
       #thermal-receipt-container pre {
         margin: 0 auto !important;
         font-family: 'Noto Sans Devanagari', 'Courier New', Courier, monospace !important;
-        font-size: 10px !important;
-        line-height: 1.2 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        line-height: 1.3 !important;
         color: #000 !important;
         white-space: pre-wrap !important;
         word-break: break-word !important;
@@ -677,25 +685,23 @@ export function triggerSystemPrint(htmlContent: string, paperWidth: '58mm' | '80
 async function ensureDevanagariFont(): Promise<void> {
   if (typeof document === 'undefined') return
   try {
-    // Check if font is already loaded
-    const isLoaded = document.fonts.check('bold 20px "Noto Sans Devanagari"')
-    if (isLoaded) return
+    if (document.fonts && document.fonts.check) {
+      const isLoaded = document.fonts.check('bold 24px "Noto Sans Devanagari"') || document.fonts.check('24px "Noto Sans Devanagari"')
+      if (isLoaded) return
 
-    // Force-load the font with a timeout
-    await Promise.race([
-      document.fonts.load('bold 20px "Noto Sans Devanagari"'),
-      new Promise(resolve => setTimeout(resolve, 3000)) // 3s timeout
-    ])
+      await Promise.race([
+        document.fonts.load('bold 24px "Noto Sans Devanagari"'),
+        new Promise(resolve => setTimeout(resolve, 3000))
+      ])
 
-    // Wait for all fonts to be ready
-    await document.fonts.ready
+      await document.fonts.ready
+    }
   } catch (e) {
-    console.warn('Failed to preload Devanagari font for canvas, Hindi may not render:', e)
+    console.warn('Failed to preload Devanagari font for canvas:', e)
   }
 }
 
 async function renderTextToCanvas(text: string, settings: PrinterSettings): Promise<HTMLCanvasElement> {
-  // Wait for Hindi font to be loaded before drawing
   await ensureDevanagariFont()
 
   const canvas = document.createElement('canvas')
@@ -703,10 +709,9 @@ async function renderTextToCanvas(text: string, settings: PrinterSettings): Prom
 
   const is58mm = settings.paperWidth === '58mm'
   const canvasWidth = is58mm ? 384 : 576
-  const fontSize = 20
-  const lineHeight = 26
+  const fontSize = is58mm ? 24 : 28
+  const lineHeight = is58mm ? 32 : 36
 
-  // Use Noto Sans Devanagari + native system Devanagari sans-serif fallback for mobile devices
   const fontFamily = '"Noto Sans Devanagari", "Devanagari Sangam MN", "Arial Unicode MS", "Kohinoor Devanagari", sans-serif'
 
   const lines = text.split('\n')
@@ -726,7 +731,19 @@ async function renderTextToCanvas(text: string, settings: PrinterSettings): Prom
 
   lines.forEach((line, index) => {
     const yOffset = index * lineHeight + 10
-    ctx.fillText(line, 0, yOffset)
+    const trimmed = line.trim()
+
+    // Mathematical pixel center alignment for separators, header titles, and footer notes
+    const isSeparator = /^(=+|-+)$/.test(trimmed)
+    const isHeaderLine = /^(SHARMA DAIRY|शर्मा डेयरी|Milk Collection Center|दूध संग्रह केंद्र|Ph:|फोन:|PAYMENT SLIP|भुगतान रसीद|MILK SALE|दूध बिक्री|STORE BILL|स्टोर बिल|MINI STATEMENT|मिनी पासबुक|PRINTER TEST|प्रिंटर परीक्षण|TEST OK|परीक्षण सफल|Thank You|धन्यवाद)/i.test(trimmed)
+
+    if (isSeparator || isHeaderLine) {
+      ctx.textAlign = 'center'
+      ctx.fillText(trimmed, canvasWidth / 2, yOffset)
+    } else {
+      ctx.textAlign = 'left'
+      ctx.fillText(line, 12, yOffset)
+    }
   })
 
   return canvas
