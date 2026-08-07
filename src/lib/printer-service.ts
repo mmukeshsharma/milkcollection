@@ -322,14 +322,14 @@ export function buildPurchaseText(purchase: any, settings: PrinterSettings, loca
     lines.push(centre(tr('phone', locale, settings) + ': ' + settings.dairyPhone, W))
   }
   lines.push(S)
-  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W))
-  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 8, W))
-  lines.push(rowCustom(tr('milkType', locale, settings), milkType + ' (' + shift + ')', 8, W))
-  lines.push(rowCustom(tr('qty', locale, settings), qty, 8, W))
-  lines.push(rowCustom(tr('fatSnf', locale, settings), fat + ' / ' + snf, 8, W))
-  lines.push(rowCustom(tr('rate', locale, settings), rate + '/L', 8, W))
+  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 10, W))
+  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 10, W))
+  lines.push(rowCustom(tr('milkType', locale, settings), milkType + ' (' + shift + ')', 10, W))
+  lines.push(rowCustom(tr('qty', locale, settings), qty, 10, W))
+  lines.push(rowCustom(tr('fatSnf', locale, settings), fat + ' / ' + snf, 10, W))
+  lines.push(rowCustom(tr('rate', locale, settings), rate + '/L', 10, W))
   lines.push(S)
-  lines.push(rowCustom(tr('amount', locale, settings), amount, 8, W))
+  lines.push(rowCustom(tr('amount', locale, settings), amount, 10, W))
 
   return lines.join('\n')
 }
@@ -353,14 +353,14 @@ export function buildPaymentText(payment: any, settings: PrinterSettings, locale
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('paymentReceipt', locale, settings), W))
   lines.push(S)
-  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W))
-  lines.push(rowCustom(tr('paidTo', locale, settings), custDisplay, 8, W))
-  lines.push(rowCustom(tr('method', locale, settings), payMethod, 8, W))
+  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 10, W))
+  lines.push(rowCustom(tr('paidTo', locale, settings), custDisplay, 10, W))
+  lines.push(rowCustom(tr('method', locale, settings), payMethod, 10, W))
   if (payment.reference_no) {
-    lines.push(rowCustom(tr('refNo', locale, settings), payment.reference_no, 8, W))
+    lines.push(rowCustom(tr('refNo', locale, settings), payment.reference_no, 10, W))
   }
   lines.push(S)
-  lines.push(rowCustom(tr('amount', locale, settings), amount, 8, W))
+  lines.push(rowCustom(tr('amount', locale, settings), amount, 10, W))
 
   return lines.join('\n')
 }
@@ -385,13 +385,13 @@ export function buildSaleText(sale: any, settings: PrinterSettings, locale: Loca
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('milkSale', locale, settings), W))
   lines.push(S)
-  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W))
-  lines.push(rowCustom(tr('buyer', locale, settings), buyerDisplay, 8, W))
-  lines.push(rowCustom(tr('milkType', locale, settings), milkType, 8, W))
-  lines.push(rowCustom(tr('qty', locale, settings), qty, 8, W))
-  lines.push(rowCustom(tr('rate', locale, settings), rate + '/L', 8, W))
+  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 10, W))
+  lines.push(rowCustom(tr('buyer', locale, settings), buyerDisplay, 10, W))
+  lines.push(rowCustom(tr('milkType', locale, settings), milkType, 10, W))
+  lines.push(rowCustom(tr('qty', locale, settings), qty, 10, W))
+  lines.push(rowCustom(tr('rate', locale, settings), rate + '/L', 10, W))
   lines.push(S)
-  lines.push(rowCustom(tr('amount', locale, settings), amount, 8, W))
+  lines.push(rowCustom(tr('amount', locale, settings), amount, 10, W))
 
   return lines.join('\n')
 }
@@ -421,8 +421,8 @@ export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale:
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('storeSale', locale, settings), W))
   lines.push(S)
-  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W))
-  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 8, W))
+  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 10, W))
+  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 10, W))
   lines.push(S)
   lines.push(tableHeader)
   lines.push(S)
@@ -438,7 +438,7 @@ export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale:
   })
 
   lines.push(S)
-  lines.push(rowCustom(tr('grandTotal', locale, settings), cur(grandTotal), 8, W))
+  lines.push(rowCustom(tr('grandTotal', locale, settings), cur(grandTotal), 10, W))
 
   return lines.join('\n')
 }
@@ -454,8 +454,9 @@ export function buildPassbookText(ledger: any[], customer: any, settings: Printe
   const village = customer?.village || ''
   const today = fmtDate(new Date().toISOString())
 
+  // Passbook columns (strictly 32 chars): Date (5) Entry (10) Amt (7) Bal (7) + 3 spaces = 32
   const colDate = padEndVisual(tr('pbDate', locale, settings), 5)
-  const colPart = padEndVisual(tr('pbParticulars', locale, settings), 11)
+  const colPart = padEndVisual(tr('pbParticulars', locale, settings), 10)
   const colAmt = tr('pbAmt', locale, settings).padStart(7, ' ')
   const colBal = tr('pbBal', locale, settings).padStart(7, ' ')
   const pbHeader = `${colDate} ${colPart} ${colAmt} ${colBal}`
@@ -467,7 +468,7 @@ export function buildPassbookText(ledger: any[], customer: any, settings: Printe
 
     const rawParticulars = String(r.particulars || r.entry || '')
     const particularsText = locale === 'hi' ? autoTranslateToHindi(rawParticulars) : rawParticulars
-    const particulars = padEndVisual(particularsText.slice(0, 11), 11)
+    const particulars = padEndVisual(particularsText.slice(0, 10), 10)
 
     const credit = Number(r.credit_amount || 0)
     const debit = Number(r.debit_amount || 0)
@@ -487,17 +488,17 @@ export function buildPassbookText(ledger: any[], customer: any, settings: Printe
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('miniStatement', locale, settings), W))
   lines.push(S)
-  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 8, W))
+  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 10, W))
   if (village) {
-    lines.push(rowCustom(tr('village', locale, settings), village, 8, W))
+    lines.push(rowCustom(tr('village', locale, settings), village, 10, W))
   }
-  lines.push(rowCustom(tr('date', locale, settings), today, 8, W))
+  lines.push(rowCustom(tr('date', locale, settings), today, 10, W))
   lines.push(S)
   lines.push(pbHeader)
   lines.push(S)
   lines.push(...ledgerLines)
   lines.push(S)
-  lines.push(rowCustom(tr('netDue', locale, settings), netFormatted, 8, W))
+  lines.push(rowCustom(tr('netDue', locale, settings), netFormatted, 10, W))
 
   return lines.join('\n')
 }
@@ -510,10 +511,10 @@ export function buildTestText(settings: PrinterSettings, locale: Locale = 'en'):
   lines.push(centre(settings.dairyName, W))
   lines.push(centre(tr('printerTest', locale, settings), W))
   lines.push(S)
-  lines.push(rowCustom(tr('paper', locale, settings), settings.paperWidth, 8, W))
-  lines.push(rowCustom(tr('mode', locale, settings), settings.connectionType, 8, W))
-  lines.push(rowCustom(tr('copies', locale, settings), String(settings.copies), 8, W))
-  lines.push(rowCustom(tr('autoPrint', locale, settings), settings.autoPrintAfterSave ? 'ON' : 'OFF', 8, W))
+  lines.push(rowCustom(tr('paper', locale, settings), settings.paperWidth, 10, W))
+  lines.push(rowCustom(tr('mode', locale, settings), settings.connectionType, 10, W))
+  lines.push(rowCustom(tr('copies', locale, settings), String(settings.copies), 10, W))
+  lines.push(rowCustom(tr('autoPrint', locale, settings), settings.autoPrintAfterSave ? 'ON' : 'OFF', 10, W))
   lines.push(S)
   lines.push(centre(tr('testOk', locale, settings), W))
   lines.push(centre(new Date().toLocaleString(locale === 'hi' ? 'hi-IN' : 'en-IN'), W))
@@ -728,16 +729,15 @@ async function renderTextToCanvas(text: string, settings: PrinterSettings): Prom
     const yOffset = index * lineHeight + 10
     const trimmed = line.trim()
 
-    // Mathematical pixel center alignment for separators, header titles, and footer notes
     const isSeparator = /^(=+|-+)$/.test(trimmed)
-    const isHeaderLine = /^(SHARMA DAIRY|शर्मा डेयरी|Milk Collection Center|दूध संग्रह केंद्र|Ph:|फोन:|PAYMENT SLIP|भुगतान रसीद|MILK SALE|दूध बिक्री|STORE BILL|स्टोर बिल|MINI STATEMENT|मिनी पासबुक|PRINTER TEST|प्रिंटर परीक्षण|TEST OK|परीक्षण सफल|Thank You|धन्यवाद)/i.test(trimmed)
+    const isHeaderLine = /^(SHARMA DAIRY|शर्मा डेयरी|Milk Collection Center|दूध संग्रह केंद्र|Ph:|फोन:|PAYMENT SLIP|भुगतान रसीद|MILK SALE|दूध बिक्री|STORE BILL|स्टोर बिल|MINI STATEMENT|मिनी पासबुक|PRINTER TEST|प्रिंटर परीक्षण|TEST OK|परीक्षण सफल)/i.test(trimmed)
 
-    if (isSeparator || isHeaderLine) {
+    if (isHeaderLine) {
       ctx.textAlign = 'center'
       ctx.fillText(trimmed, canvasWidth / 2, yOffset)
     } else {
       ctx.textAlign = 'left'
-      ctx.fillText(line, 12, yOffset)
+      ctx.fillText(line, 4, yOffset)
     }
   })
 
