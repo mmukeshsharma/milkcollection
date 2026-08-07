@@ -21,6 +21,9 @@ export interface PrinterSettings {
   dairyName: string
   dairySubtitle: string
   dairyPhone: string
+  showSubtitle: boolean
+  showPhone: boolean
+  separatorStyle: 'dash' | 'equal' | 'clean'
   connectionType: 'system' | 'bluetooth'
   autoPrintAfterSave: boolean
   paperWidth: '58mm' | '80mm'
@@ -35,6 +38,9 @@ const DEFAULT_SETTINGS: PrinterSettings = {
   dairyName: 'SHARMA DAIRY',
   dairySubtitle: 'Milk Collection Center',
   dairyPhone: '+91 98765 43210',
+  showSubtitle: true,
+  showPhone: true,
+  separatorStyle: 'dash',
   connectionType: 'system',
   autoPrintAfterSave: false,
   paperWidth: '58mm',
@@ -230,8 +236,10 @@ function lineWidth(paperWidth: '58mm' | '80mm') {
   return paperWidth === '58mm' ? 32 : 48
 }
 
-function sep(char: '=' | '-', width: number) {
-  return char.repeat(width)
+function getSep(style: 'dash' | 'equal' | 'clean' = 'dash', width: number) {
+  if (style === 'equal') return '='.repeat(width)
+  if (style === 'clean') return ' '.repeat(width)
+  return '-'.repeat(width)
 }
 
 function centre(text: string, width: number) {
@@ -284,12 +292,11 @@ function cur(amount: number): string {
   return 'Rs.' + amount.toFixed(2)
 }
 
-// ─── Classic Receipt builders ─────────────────────────────────────────────────
+// ─── Minimal Classic Receipt builders ─────────────────────────────────────────
 
 export function buildPurchaseText(purchase: any, settings: PrinterSettings, locale: Locale = 'en'): string {
   const W = lineWidth(settings.paperWidth)
-  const EQ = sep('=', W)
-  const DA = sep('-', W)
+  const S = getSep(settings.separatorStyle || 'dash', W)
 
   const rawName = purchase.customers?.name || purchase.customerName || 'Farmer'
   const rawCode = purchase.customers?.customer_code || purchase.customerCode || ''
@@ -306,29 +313,30 @@ export function buildPurchaseText(purchase: any, settings: PrinterSettings, loca
   const rate = cur(Number(purchase.rate_per_liter || 0))
   const amount = cur(Number(purchase.total_amount || 0))
 
-  return [
-    EQ,
-    centre(settings.dairyName, W),
-    centre(settings.dairySubtitle, W),
-    centre(tr('phone', locale, settings) + ': ' + settings.dairyPhone, W),
-    EQ,
-    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W),
-    rowCustom(tr('customer', locale, settings), custDisplay, 8, W),
-    rowCustom(tr('milkType', locale, settings), milkType + ' (' + shift + ')', 8, W),
-    rowCustom(tr('qty', locale, settings), qty, 8, W),
-    rowCustom(tr('fatSnf', locale, settings), fat + ' / ' + snf, 8, W),
-    rowCustom(tr('rate', locale, settings), rate + '/L', 8, W),
-    DA,
-    rowCustom(tr('amount', locale, settings), amount, 8, W),
-    EQ,
-    centre(tr('thankYou', locale, settings), W),
-  ].join('\n')
+  const lines: string[] = []
+  lines.push(centre(settings.dairyName, W))
+  if (settings.showSubtitle !== false && settings.dairySubtitle) {
+    lines.push(centre(settings.dairySubtitle, W))
+  }
+  if (settings.showPhone !== false && settings.dairyPhone) {
+    lines.push(centre(tr('phone', locale, settings) + ': ' + settings.dairyPhone, W))
+  }
+  lines.push(S)
+  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W))
+  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 8, W))
+  lines.push(rowCustom(tr('milkType', locale, settings), milkType + ' (' + shift + ')', 8, W))
+  lines.push(rowCustom(tr('qty', locale, settings), qty, 8, W))
+  lines.push(rowCustom(tr('fatSnf', locale, settings), fat + ' / ' + snf, 8, W))
+  lines.push(rowCustom(tr('rate', locale, settings), rate + '/L', 8, W))
+  lines.push(S)
+  lines.push(rowCustom(tr('amount', locale, settings), amount, 8, W))
+
+  return lines.join('\n')
 }
 
 export function buildPaymentText(payment: any, settings: PrinterSettings, locale: Locale = 'en'): string {
   const W = lineWidth(settings.paperWidth)
-  const EQ = sep('=', W)
-  const DA = sep('-', W)
+  const S = getSep(settings.separatorStyle || 'dash', W)
 
   const rawName = payment.customers?.name || payment.customerName || 'Farmer'
   const rawCode = payment.customers?.customer_code || payment.customerCode || ''
@@ -341,26 +349,25 @@ export function buildPaymentText(payment: any, settings: PrinterSettings, locale
   const payMethod = locale === 'hi' ? autoTranslateToHindi(rawMethod) : rawMethod.toUpperCase()
   const amount = cur(Number(payment.amount || 0))
 
-  return [
-    EQ,
-    centre(settings.dairyName, W),
-    centre(tr('paymentReceipt', locale, settings), W),
-    EQ,
-    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W),
-    rowCustom(tr('paidTo', locale, settings), custDisplay, 8, W),
-    rowCustom(tr('method', locale, settings), payMethod, 8, W),
-    ...(payment.reference_no ? [rowCustom(tr('refNo', locale, settings), payment.reference_no, 8, W)] : []),
-    DA,
-    rowCustom(tr('amount', locale, settings), amount, 8, W),
-    EQ,
-    centre(tr('thankYou', locale, settings), W),
-  ].join('\n')
+  const lines: string[] = []
+  lines.push(centre(settings.dairyName, W))
+  lines.push(centre(tr('paymentReceipt', locale, settings), W))
+  lines.push(S)
+  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W))
+  lines.push(rowCustom(tr('paidTo', locale, settings), custDisplay, 8, W))
+  lines.push(rowCustom(tr('method', locale, settings), payMethod, 8, W))
+  if (payment.reference_no) {
+    lines.push(rowCustom(tr('refNo', locale, settings), payment.reference_no, 8, W))
+  }
+  lines.push(S)
+  lines.push(rowCustom(tr('amount', locale, settings), amount, 8, W))
+
+  return lines.join('\n')
 }
 
 export function buildSaleText(sale: any, settings: PrinterSettings, locale: Locale = 'en'): string {
   const W = lineWidth(settings.paperWidth)
-  const EQ = sep('=', W)
-  const DA = sep('-', W)
+  const S = getSep(settings.separatorStyle || 'dash', W)
 
   const rawBuyer = sale.buyer_name || 'Buyer'
   const rawCode = sale.buyer_code || sale.customerCode || ''
@@ -374,27 +381,24 @@ export function buildSaleText(sale: any, settings: PrinterSettings, locale: Loca
   const rate = cur(Number(sale.rate_per_liter || 0))
   const amount = cur(Number(sale.total_amount || 0))
 
-  return [
-    EQ,
-    centre(settings.dairyName, W),
-    centre(tr('milkSale', locale, settings), W),
-    EQ,
-    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W),
-    rowCustom(tr('buyer', locale, settings), buyerDisplay, 8, W),
-    rowCustom(tr('milkType', locale, settings), milkType, 8, W),
-    rowCustom(tr('qty', locale, settings), qty, 8, W),
-    rowCustom(tr('rate', locale, settings), rate + '/L', 8, W),
-    DA,
-    rowCustom(tr('amount', locale, settings), amount, 8, W),
-    EQ,
-    centre(tr('thankYou', locale, settings), W),
-  ].join('\n')
+  const lines: string[] = []
+  lines.push(centre(settings.dairyName, W))
+  lines.push(centre(tr('milkSale', locale, settings), W))
+  lines.push(S)
+  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W))
+  lines.push(rowCustom(tr('buyer', locale, settings), buyerDisplay, 8, W))
+  lines.push(rowCustom(tr('milkType', locale, settings), milkType, 8, W))
+  lines.push(rowCustom(tr('qty', locale, settings), qty, 8, W))
+  lines.push(rowCustom(tr('rate', locale, settings), rate + '/L', 8, W))
+  lines.push(S)
+  lines.push(rowCustom(tr('amount', locale, settings), amount, 8, W))
+
+  return lines.join('\n')
 }
 
 export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale: Locale = 'en'): string {
   const W = lineWidth(settings.paperWidth)
-  const EQ = sep('=', W)
-  const DA = sep('-', W)
+  const S = getSep(settings.separatorStyle || 'dash', W)
 
   const rawName = sale.customerName || sale.customers?.name || 'Guest Customer'
   const rawCode = sale.customerCode || sale.customers?.customer_code || ''
@@ -413,17 +417,15 @@ export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale:
   const colAmt = (tr('total', locale, settings)).padStart(8, ' ')
   const tableHeader = `${colItem}${colRat}${colQty}${colAmt}`
 
-  let output = [
-    EQ,
-    centre(settings.dairyName, W),
-    centre(tr('storeSale', locale, settings), W),
-    EQ,
-    rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W),
-    rowCustom(tr('customer', locale, settings), custDisplay, 8, W),
-    DA,
-    tableHeader,
-    DA,
-  ]
+  const lines: string[] = []
+  lines.push(centre(settings.dairyName, W))
+  lines.push(centre(tr('storeSale', locale, settings), W))
+  lines.push(S)
+  lines.push(rowCustom(tr('date', locale, settings), dateStr + ' ' + timeStr, 8, W))
+  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 8, W))
+  lines.push(S)
+  lines.push(tableHeader)
+  lines.push(S)
 
   items.forEach((item: any) => {
     const rawItemName = String(item.product_name || item.name || '')
@@ -432,21 +434,18 @@ export function buildStoreSaleText(sale: any, settings: PrinterSettings, locale:
     const ratePart = `${Number(item.price_per_item || item.price || 0).toFixed(0)}`.padStart(6, ' ')
     const qtyPart = `${item.quantity}`.padStart(4, ' ')
     const totalPart = `${Number(item.total_amount || item.total || 0).toFixed(0)}`.padStart(8, ' ')
-    output.push(`${namePart}${ratePart}${qtyPart}${totalPart}`)
+    lines.push(`${namePart}${ratePart}${qtyPart}${totalPart}`)
   })
 
-  output.push(DA)
-  output.push(rowCustom(tr('grandTotal', locale, settings), cur(grandTotal), 8, W))
-  output.push(EQ)
-  output.push(centre(tr('thankYou', locale, settings), W))
+  lines.push(S)
+  lines.push(rowCustom(tr('grandTotal', locale, settings), cur(grandTotal), 8, W))
 
-  return output.join('\n')
+  return lines.join('\n')
 }
 
 export function buildPassbookText(ledger: any[], customer: any, settings: PrinterSettings, locale: Locale = 'en'): string {
   const W = lineWidth(settings.paperWidth)
-  const EQ = sep('=', W)
-  const DA = sep('-', W)
+  const S = getSep(settings.separatorStyle || 'dash', W)
 
   const rawName = customer?.name || 'N/A'
   const rawCode = customer?.customer_code || ''
@@ -484,46 +483,42 @@ export function buildPassbookText(ledger: any[], customer: any, settings: Printe
   const net = ledger.length > 0 ? ledger[ledger.length - 1].running_balance : 0
   const netFormatted = cur(Number(net))
 
-  return [
-    EQ,
-    centre(settings.dairyName, W),
-    centre(tr('miniStatement', locale, settings), W),
-    EQ,
-    rowCustom(tr('customer', locale, settings), custDisplay, 8, W),
-    ...(village ? [rowCustom(tr('village', locale, settings), village, 8, W)] : []),
-    rowCustom(tr('date', locale, settings), today, 8, W),
-    DA,
-    pbHeader,
-    DA,
-    ...ledgerLines,
-    DA,
-    rowCustom(tr('netDue', locale, settings), netFormatted, 8, W),
-    EQ,
-    centre(tr('thankYou', locale, settings), W),
-  ].join('\n')
+  const lines: string[] = []
+  lines.push(centre(settings.dairyName, W))
+  lines.push(centre(tr('miniStatement', locale, settings), W))
+  lines.push(S)
+  lines.push(rowCustom(tr('customer', locale, settings), custDisplay, 8, W))
+  if (village) {
+    lines.push(rowCustom(tr('village', locale, settings), village, 8, W))
+  }
+  lines.push(rowCustom(tr('date', locale, settings), today, 8, W))
+  lines.push(S)
+  lines.push(pbHeader)
+  lines.push(S)
+  lines.push(...ledgerLines)
+  lines.push(S)
+  lines.push(rowCustom(tr('netDue', locale, settings), netFormatted, 8, W))
+
+  return lines.join('\n')
 }
 
 export function buildTestText(settings: PrinterSettings, locale: Locale = 'en'): string {
   const W = lineWidth(settings.paperWidth)
-  const EQ = sep('=', W)
-  const DA = sep('-', W)
+  const S = getSep(settings.separatorStyle || 'dash', W)
 
-  return [
-    EQ,
-    centre(settings.dairyName, W),
-    centre(tr('printerTest', locale, settings), W),
-    EQ,
-    rowCustom(tr('paper', locale, settings), settings.paperWidth, 8, W),
-    rowCustom(tr('mode', locale, settings), settings.connectionType, 8, W),
-    rowCustom(tr('copies', locale, settings), String(settings.copies), 8, W),
-    rowCustom(tr('autoPrint', locale, settings), settings.autoPrintAfterSave ? 'ON' : 'OFF', 8, W),
-    DA,
-    centre(tr('testOk', locale, settings), W),
-    DA,
-    centre(new Date().toLocaleString(locale === 'hi' ? 'hi-IN' : 'en-IN'), W),
-    EQ,
-    centre(tr('thankYou', locale, settings), W),
-  ].join('\n')
+  const lines: string[] = []
+  lines.push(centre(settings.dairyName, W))
+  lines.push(centre(tr('printerTest', locale, settings), W))
+  lines.push(S)
+  lines.push(rowCustom(tr('paper', locale, settings), settings.paperWidth, 8, W))
+  lines.push(rowCustom(tr('mode', locale, settings), settings.connectionType, 8, W))
+  lines.push(rowCustom(tr('copies', locale, settings), String(settings.copies), 8, W))
+  lines.push(rowCustom(tr('autoPrint', locale, settings), settings.autoPrintAfterSave ? 'ON' : 'OFF', 8, W))
+  lines.push(S)
+  lines.push(centre(tr('testOk', locale, settings), W))
+  lines.push(centre(new Date().toLocaleString(locale === 'hi' ? 'hi-IN' : 'en-IN'), W))
+
+  return lines.join('\n')
 }
 
 // ─── HTML wrappers ────────────────────────────────────────────────────────────

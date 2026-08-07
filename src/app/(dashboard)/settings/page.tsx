@@ -459,6 +459,9 @@ export default function SettingsPage() {
       dairyName: 'SHARMA DAIRY',
       dairySubtitle: 'Milk Collection Center',
       dairyPhone: '+91 98765 43210',
+      showSubtitle: true,
+      showPhone: true,
+      separatorStyle: 'dash',
       connectionType: 'system',
       autoPrintAfterSave: false,
       paperWidth: '58mm',
@@ -740,10 +743,10 @@ export default function SettingsPage() {
         {/* Right Column (50% Width) - Form Settings Cards */}
         <form onSubmit={handleSave} className="flex flex-col space-y-4 md:space-y-0 md:grid md:grid-rows-[auto_1fr_auto] md:gap-4 h-full">
 
-          {/* Card 1: Thermal Printer Settings (Shop customisation) */}
+          {/* Card 1: Thermal Printer Settings (Shop customisation & Design pattern) */}
           <div className="rounded-2xl border border-white/40 bg-white/75 p-5 shadow-xl backdrop-blur-xl space-y-4">
             <h3 className="font-bold text-slate-800 border-b pb-2 flex items-center gap-1.5 text-sm">
-              🖨️ {hi ? 'थर्मल प्रिंटर सेटिंग्स' : 'Thermal Printer Settings'}
+              🖨️ {hi ? 'थर्मल प्रिंटर और रसीद डिज़ाइन सेटिंग्स' : 'Thermal Printer & Receipt Design Settings'}
             </h3>
 
             <div className="space-y-3">
@@ -754,17 +757,43 @@ export default function SettingsPage() {
                   className="bg-white/50 border-slate-200 font-bold text-blue-700 text-sm uppercase h-8"
                   placeholder="SHARMA DAIRY" />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="dairySubtitle" className="text-xs font-bold text-slate-700">{hi ? 'रसीद उपशीर्षक' : 'Receipt Subtitle'}</Label>
-                <Input id="dairySubtitle" value={settings.dairySubtitle}
-                  onChange={(e) => setSettings({ ...settings, dairySubtitle: e.target.value })}
-                  className="bg-white/50 border-slate-200 h-8 text-xs" placeholder="Milk Collection Center" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="dairySubtitle" className="text-xs font-bold text-slate-700">{hi ? 'रसीद उपशीर्षक' : 'Receipt Subtitle'}</Label>
+                    <label className="flex items-center gap-1 cursor-pointer text-[10px] text-slate-500 font-bold">
+                      <input type="checkbox" checked={settings.showSubtitle !== false} onChange={(e) => setSettings({ ...settings, showSubtitle: e.target.checked })} />
+                      <span>{hi ? 'दिखाएं' : 'Show'}</span>
+                    </label>
+                  </div>
+                  <Input id="dairySubtitle" value={settings.dairySubtitle}
+                    onChange={(e) => setSettings({ ...settings, dairySubtitle: e.target.value })}
+                    className="bg-white/50 border-slate-200 h-8 text-xs" placeholder="Milk Collection Center" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="dairyPhone" className="text-xs font-bold text-slate-700">{hi ? 'फोन नंबर' : 'Phone Number'}</Label>
+                    <label className="flex items-center gap-1 cursor-pointer text-[10px] text-slate-500 font-bold">
+                      <input type="checkbox" checked={settings.showPhone !== false} onChange={(e) => setSettings({ ...settings, showPhone: e.target.checked })} />
+                      <span>{hi ? 'दिखाएं' : 'Show'}</span>
+                    </label>
+                  </div>
+                  <Input id="dairyPhone" value={settings.dairyPhone}
+                    onChange={(e) => setSettings({ ...settings, dairyPhone: e.target.value })}
+                    className="bg-white/50 border-slate-200 h-8 text-xs" placeholder="+91 98765 43210" />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="dairyPhone" className="text-xs font-bold text-slate-700">{hi ? 'फोन नंबर' : 'Phone Number'}</Label>
-                <Input id="dairyPhone" value={settings.dairyPhone}
-                  onChange={(e) => setSettings({ ...settings, dairyPhone: e.target.value })}
-                  className="bg-white/50 border-slate-200 h-8 text-xs" placeholder="+91 98765 43210" />
+
+              {/* Separator Style Pattern Selection */}
+              <div className="space-y-1 pt-1">
+                <Label htmlFor="separatorStyle" className="text-xs font-bold text-slate-700">{hi ? 'रसीद डिवाइडर डिज़ाइन (Pattern)' : 'Receipt Separator Pattern'}</Label>
+                <select id="separatorStyle" value={settings.separatorStyle || 'dash'}
+                  onChange={(e: any) => setSettings({ ...settings, separatorStyle: e.target.value })}
+                  className="flex h-8 w-full rounded-md border border-slate-200 bg-white/50 px-2 py-0.5 text-xs shadow-xs focus:outline-none font-semibold text-slate-700 cursor-pointer">
+                  <option value="dash">➖ {hi ? 'सिंगल डैश (Dashed - )' : 'Single Dash (- - -)'}</option>
+                  <option value="equal">══ {hi ? 'डबल लाइन (Double = )' : 'Double Line (= = =)'}</option>
+                  <option value="clean">⬜ {hi ? 'क्लीन / खाली जगह (Clean Space)' : 'Clean Minimal Space'}</option>
+                </select>
               </div>
             </div>
           </div>
